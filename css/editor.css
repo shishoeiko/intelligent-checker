@@ -597,3 +597,151 @@
         justify-content: center;
     }
 }
+
+/* ========================================
+   Heading Structure Checker Styles
+   ======================================== */
+
+/* パネルコンテンツ */
+.ic-heading-panel-content {
+    padding: 0;
+}
+
+/* コピーフィードバック */
+.ic-copy-feedback {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.ic-copy-feedback.success {
+    background: #dcfce7;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.ic-copy-feedback.error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+/* H2コピーボタン */
+.ic-heading-copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.ic-heading-copy-btn:hover {
+    background: #2563eb;
+}
+
+.ic-heading-copy-btn:active {
+    background: #1d4ed8;
+}
+
+/* 見出しツリー */
+.ic-heading-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ic-heading-tree-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.ic-heading-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f9fafb;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-left-color 0.15s;
+    border-left: 2px solid transparent;
+}
+
+.ic-heading-item:hover {
+    background: #f3f4f6;
+    border-left-color: #3b82f6;
+}
+
+/* 見出しレベルバッジ */
+.ic-heading-level-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* H2バッジ（青） */
+.ic-heading-level-2 .ic-heading-level-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+/* H3バッジ（緑） */
+.ic-heading-level-3 .ic-heading-level-badge {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+/* 見出しテキスト */
+.ic-heading-text {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+/* 空の見出し */
+.ic-heading-item.empty .ic-heading-text {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+/* 子要素のコンテナ */
+.ic-heading-children {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+}
+
+/* 見出しなしメッセージ */
+.ic-heading-empty {
+    padding: 16px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13px;
+    background: #f9fafb;
+    border-radius: 4px;
+}

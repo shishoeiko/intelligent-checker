@@ -659,12 +659,166 @@
     };
 
     // ========================================
+    // Heading Structure Checker Module
+    // ========================================
+    const HeadingStructureChecker = {
+        /**
+         * H2とH3の見出しブロックを取得
+         */
+        getAllHeadings: function() {
+            const blocks = select('core/block-editor').getBlocks();
+            const headings = [];
+
+            function checkBlocks(blocks) {
+                blocks.forEach(block => {
+                    if (block.name === 'core/heading') {
+                        const level = block.attributes.level || 2;
+                        // H2とH3のみを対象とする
+                        if (level === 2 || level === 3) {
+                            const content = block.attributes.content || '';
+                            const plainText = content.replace(/<[^>]*>/g, '').trim();
+
+                            headings.push({
+                                clientId: block.clientId,
+                                level: level,
+                                text: plainText,
+                                content: content
+                            });
+                        }
+                    }
+
+                    if (block.innerBlocks && block.innerBlocks.length > 0) {
+                        checkBlocks(block.innerBlocks);
+                    }
+                });
+            }
+
+            checkBlocks(blocks);
+            return headings;
+        },
+
+        /**
+         * 見出しをツリー構造に変換
+         */
+        buildHeadingTree: function(headings) {
+            const tree = [];
+            const stack = [{ level: 1, children: tree }];
+
+            headings.forEach(heading => {
+                const node = {
+                    ...heading,
+                    children: []
+                };
+
+                // 現在のレベルより大きいか等しいスタックを除去
+                while (stack.length > 1 && stack[stack.length - 1].level >= heading.level) {
+                    stack.pop();
+                }
+
+                // 親の children に追加
+                stack[stack.length - 1].children.push(node);
+
+                // スタックに追加
+                stack.push(node);
+            });
+
+            return tree;
+        },
+
+        /**
+         * H2一覧をクリップボードにコピー
+         */
+        copyH2ToClipboard: function(headings, callback) {
+            const h2Headings = headings.filter(h => h.level === 2);
+            const h2Texts = h2Headings.map(h => h.text).join('\n');
+
+            if (!h2Texts) {
+                if (callback) callback(false);
+                return;
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(h2Texts)
+                    .then(() => callback && callback(true))
+                    .catch(() => this.fallbackCopy(h2Texts, callback));
+            } else {
+                this.fallbackCopy(h2Texts, callback);
+            }
+        },
+
+        /**
+         * フォールバックコピー（旧ブラウザ対応）
+         */
+        fallbackCopy: function(text, callback) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                if (callback) callback(true);
+            } catch (err) {
+                if (callback) callback(false);
+            }
+            document.body.removeChild(textarea);
+        }
+    };
+
+    // ========================================
     // Main Plugin Component
     // ========================================
+    // HeadingTreeItem コンポーネント（再帰的にツリーをレンダリング）
+    function HeadingTreeItem({ heading, depth }) {
+        const handleClick = () => {
+            dispatch('core/block-editor').selectBlock(heading.clientId);
+            const blockElement = document.querySelector(`[data-block="${heading.clientId}"]`);
+            if (blockElement) {
+                blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        };
+
+        const isEmpty = !heading.text;
+
+        return createElement(
+            'div',
+            { className: 'ic-heading-tree-item' },
+            createElement(
+                'div',
+                {
+                    className: `ic-heading-item ic-heading-level-${heading.level}${isEmpty ? ' empty' : ''}`,
+                    style: { paddingLeft: `${depth * 16 + 10}px` },
+                    onClick: handleClick
+                },
+                createElement('span', { className: 'ic-heading-level-badge' }, `H${heading.level}`),
+                createElement('span', { className: 'ic-heading-text' },
+                    heading.text || (l10n.emptyHeading || '(空の見出し)')
+                )
+            ),
+            heading.children && heading.children.length > 0 &&
+                createElement(
+                    'div',
+                    { className: 'ic-heading-children' },
+                    heading.children.map(child =>
+                        createElement(HeadingTreeItem, {
+                            key: child.clientId,
+                            heading: child,
+                            depth: depth + 1
+                        })
+                    )
+                )
+        );
+    }
+
     function IntelligentCheckerPlugin() {
         const [nakedUrls, setNakedUrls] = useState([]);
         const [images, setImages] = useState([]);
         const [missingAltCount, setMissingAltCount] = useState(0);
+        // 見出し構造用のstate
+        const [headings, setHeadings] = useState([]);
+        const [headingTree, setHeadingTree] = useState([]);
+        const [copyFeedback, setCopyFeedback] = useState(null);
 
         // タイトルを監視
         const postTitle = wp.data.useSelect(function(sel) {
@@ -698,6 +852,13 @@
                     const longParagraphs = LongParagraphChecker.findLongParagraphs();
                     LongParagraphChecker.updateHighlights(longParagraphs);
                     LongParagraphChecker.updateAlertBanner(longParagraphs);
+                }
+
+                // Heading Structure Checker
+                if (config.headingStructureEnabled) {
+                    const allHeadings = HeadingStructureChecker.getAllHeadings();
+                    setHeadings(allHeadings);
+                    setHeadingTree(HeadingStructureChecker.buildHeadingTree(allHeadings));
                 }
             };
 
@@ -753,11 +914,7 @@
             }
         }, []);
 
-        // サイドバーパネル（ALT Checker用）
-        if (!config.altCheckerEnabled || images.length === 0) {
-            return null;
-        }
-
+        // 画像クリックハンドラー
         const handleImageClick = (clientId) => {
             dispatch('core/block-editor').selectBlock(clientId);
             const blockElement = document.querySelector(`[data-block="${clientId}"]`);
@@ -766,47 +923,129 @@
             }
         };
 
-        return createElement(
-            PluginDocumentSettingPanel,
-            {
-                name: 'intelligent-checker-alt-panel',
-                title: l10n.altPanelTitle || '画像ALTチェック',
-                className: 'ic-alt-panel'
-            },
-            createElement(
-                'div',
-                { className: 'ic-alt-panel-content' },
-                missingAltCount > 0
-                    ? createElement('div', { className: 'ic-alt-panel-warning' },
-                        `⚠️ ${missingAltCount}件のALT未設定`
-                    )
-                    : createElement('div', { className: 'ic-alt-panel-success' },
-                        `✓ ${l10n.altAllSet || 'すべての画像にALTが設定されています'}`
-                    ),
+        // H2コピーハンドラー
+        const handleCopyH2 = () => {
+            HeadingStructureChecker.copyH2ToClipboard(headings, (success) => {
+                setCopyFeedback(success ? 'success' : 'error');
+                setTimeout(() => setCopyFeedback(null), 2000);
+            });
+        };
+
+        // パネル配列を構築
+        const panels = [];
+
+        // ALTパネル
+        if (config.altCheckerEnabled && images.length > 0) {
+            panels.push(
                 createElement(
-                    'div',
-                    { className: 'ic-alt-image-list' },
-                    images.map((image, index) =>
+                    PluginDocumentSettingPanel,
+                    {
+                        key: 'alt-panel',
+                        name: 'intelligent-checker-alt-panel',
+                        title: l10n.altPanelTitle || '画像ALTチェック',
+                        className: 'ic-alt-panel'
+                    },
+                    createElement(
+                        'div',
+                        { className: 'ic-alt-panel-content' },
+                        missingAltCount > 0
+                            ? createElement('div', { className: 'ic-alt-panel-warning' },
+                                `⚠️ ${missingAltCount}件のALT未設定`
+                            )
+                            : createElement('div', { className: 'ic-alt-panel-success' },
+                                `✓ ${l10n.altAllSet || 'すべての画像にALTが設定されています'}`
+                            ),
                         createElement(
                             'div',
-                            {
-                                key: image.clientId,
-                                className: `ic-alt-image-item ${image.hasAlt ? 'set' : 'missing'}`,
-                                onClick: () => handleImageClick(image.clientId)
-                            },
-                            createElement('span', { className: 'ic-alt-image-label' },
-                                `${l10n.altImageLabel || '画像'} ${index + 1}`
-                            ),
-                            createElement('span', { className: `ic-alt-status ${image.hasAlt ? 'set' : 'missing'}` },
-                                image.hasAlt
-                                    ? `✓ ${l10n.altStatusSet || '設定済み'}`
-                                    : `⚠️ ${l10n.altStatusMissing || '未設定'}`
+                            { className: 'ic-alt-image-list' },
+                            images.map((image, index) =>
+                                createElement(
+                                    'div',
+                                    {
+                                        key: image.clientId,
+                                        className: `ic-alt-image-item ${image.hasAlt ? 'set' : 'missing'}`,
+                                        onClick: () => handleImageClick(image.clientId)
+                                    },
+                                    createElement('span', { className: 'ic-alt-image-label' },
+                                        `${l10n.altImageLabel || '画像'} ${index + 1}`
+                                    ),
+                                    createElement('span', { className: `ic-alt-status ${image.hasAlt ? 'set' : 'missing'}` },
+                                        image.hasAlt
+                                            ? `✓ ${l10n.altStatusSet || '設定済み'}`
+                                            : `⚠️ ${l10n.altStatusMissing || '未設定'}`
+                                    )
+                                )
                             )
                         )
                     )
                 )
-            )
-        );
+            );
+        }
+
+        // 見出し構造パネル
+        if (config.headingStructureEnabled) {
+            const h2Count = headings.filter(h => h.level === 2).length;
+
+            panels.push(
+                createElement(
+                    PluginDocumentSettingPanel,
+                    {
+                        key: 'heading-panel',
+                        name: 'intelligent-checker-heading-panel',
+                        title: l10n.headingPanelTitle || '見出し構造',
+                        className: 'ic-heading-panel'
+                    },
+                    createElement(
+                        'div',
+                        { className: 'ic-heading-panel-content' },
+                        // コピー結果のフィードバック
+                        copyFeedback && createElement(
+                            'div',
+                            { className: `ic-copy-feedback ${copyFeedback}` },
+                            copyFeedback === 'success'
+                                ? (l10n.copySuccess || 'コピーしました')
+                                : (l10n.copyError || 'コピーに失敗しました')
+                        ),
+                        // H2コピーボタン
+                        h2Count > 0 && createElement(
+                            'button',
+                            {
+                                className: 'ic-heading-copy-btn',
+                                onClick: handleCopyH2,
+                                type: 'button'
+                            },
+                            `📋 ${l10n.copyH2Button || 'H2一覧をコピー'} (${h2Count}件)`
+                        ),
+                        // 見出しツリー
+                        headingTree.length > 0
+                            ? createElement(
+                                'div',
+                                { className: 'ic-heading-tree' },
+                                headingTree.map(heading =>
+                                    createElement(HeadingTreeItem, {
+                                        key: heading.clientId,
+                                        heading: heading,
+                                        depth: 0
+                                    })
+                                )
+                            )
+                            : createElement(
+                                'div',
+                                { className: 'ic-heading-empty' },
+                                l10n.noHeadings || '見出しがありません'
+                            )
+                    )
+                )
+            );
+        }
+
+        // パネルがない場合はnullを返す
+        if (panels.length === 0) {
+            return null;
+        }
+
+        // 複数パネルをFragmentでラップして返す
+        return createElement(wp.element.Fragment, null, ...panels);
     }
 
     // プラグインを登録

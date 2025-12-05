@@ -64,6 +64,8 @@ class Intelligent_Checker {
             'long_paragraph_enabled'   => true,
             'long_paragraph_threshold' => 200,
             'long_paragraph_exclude_classes' => '',
+            // 見出し構造チェック設定
+            'heading_structure_enabled' => true,
         );
     }
 
@@ -139,6 +141,9 @@ class Intelligent_Checker {
         $sanitized['long_paragraph_enabled']   = ! empty( $input['long_paragraph_enabled'] );
         $sanitized['long_paragraph_threshold'] = isset( $input['long_paragraph_threshold'] ) ? absint( $input['long_paragraph_threshold'] ) : 200;
         $sanitized['long_paragraph_exclude_classes'] = isset( $input['long_paragraph_exclude_classes'] ) ? sanitize_textarea_field( $input['long_paragraph_exclude_classes'] ) : '';
+
+        // 見出し構造チェック設定
+        $sanitized['heading_structure_enabled'] = ! empty( $input['heading_structure_enabled'] );
 
         return $sanitized;
     }
@@ -267,6 +272,17 @@ class Intelligent_Checker {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>見出し構造チェッカー</strong>
+                                <span>サイドバーに見出し（H2・H3）の階層構造を表示し、H2一覧のコピー機能を提供します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[heading_structure_enabled]" value="1" <?php checked( $settings['heading_structure_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -369,6 +385,7 @@ class Intelligent_Checker {
             'nakedUrlEnabled'         => (bool) $settings['naked_url_enabled'],
             'titleCheckerEnabled'     => (bool) $settings['title_checker_enabled'],
             'longParagraphEnabled'        => (bool) $settings['long_paragraph_enabled'],
+            'headingStructureEnabled'     => (bool) $settings['heading_structure_enabled'],
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -400,6 +417,13 @@ class Intelligent_Checker {
                 'longParagraphAlertTitle' => __( '件の段落が長すぎます', 'intelligent-checker' ),
                 'longParagraphAlertDesc'  => __( '視認性向上のため、適切な箇所で改行を追加してください', 'intelligent-checker' ),
                 'longParagraphCheck'      => __( '段落を確認', 'intelligent-checker' ),
+                // Heading Structure Checker
+                'headingPanelTitle' => __( '見出し構造', 'intelligent-checker' ),
+                'copyH2Button'      => __( 'H2一覧をコピー', 'intelligent-checker' ),
+                'noHeadings'        => __( '見出しがありません', 'intelligent-checker' ),
+                'copySuccess'       => __( 'コピーしました', 'intelligent-checker' ),
+                'copyError'         => __( 'コピーに失敗しました', 'intelligent-checker' ),
+                'emptyHeading'      => __( '(空の見出し)', 'intelligent-checker' ),
             ),
         ) );
     }
