@@ -63,6 +63,7 @@ class Intelligent_Checker {
             // 長文段落チェック設定
             'long_paragraph_enabled'   => true,
             'long_paragraph_threshold' => 200,
+            'long_paragraph_exclude_classes' => '',
         );
     }
 
@@ -137,6 +138,7 @@ class Intelligent_Checker {
         // 長文段落チェック設定
         $sanitized['long_paragraph_enabled']   = ! empty( $input['long_paragraph_enabled'] );
         $sanitized['long_paragraph_threshold'] = isset( $input['long_paragraph_threshold'] ) ? absint( $input['long_paragraph_threshold'] ) : 200;
+        $sanitized['long_paragraph_exclude_classes'] = isset( $input['long_paragraph_exclude_classes'] ) ? sanitize_textarea_field( $input['long_paragraph_exclude_classes'] ) : '';
 
         return $sanitized;
     }
@@ -315,6 +317,13 @@ class Intelligent_Checker {
                         <p class="description">段落内のテキストがこの文字数以上の場合にアラートを表示します。視認性向上のため改行を追加することを推奨します。</p>
                     </div>
 
+                    <!-- 長文段落チェック: 除外クラス -->
+                    <div class="form-section">
+                        <h2>長文段落チェック: 除外する親要素のクラス</h2>
+                        <textarea name="intelligent_checker_settings[long_paragraph_exclude_classes]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['long_paragraph_exclude_classes'] ); ?></textarea>
+                        <p class="description">1行に1つずつクラス名を入力してください。これらのクラスを持つ要素の配下にある段落はチェック対象から除外されます。</p>
+                    </div>
+
                 </div>
 
                 <?php submit_button( '設定を保存' ); ?>
@@ -359,8 +368,9 @@ class Intelligent_Checker {
             'altCheckerEnabled'       => (bool) $settings['alt_checker_enabled'],
             'nakedUrlEnabled'         => (bool) $settings['naked_url_enabled'],
             'titleCheckerEnabled'     => (bool) $settings['title_checker_enabled'],
-            'longParagraphEnabled'    => (bool) $settings['long_paragraph_enabled'],
-            'longParagraphThreshold'  => (int) $settings['long_paragraph_threshold'],
+            'longParagraphEnabled'        => (bool) $settings['long_paragraph_enabled'],
+            'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
+            'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
             'keywords'  => array(
                 'required'    => $this->text_to_array( $settings['required_kw'] ),

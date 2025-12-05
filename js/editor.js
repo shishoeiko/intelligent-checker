@@ -513,9 +513,34 @@
     // ========================================
     const LongParagraphChecker = {
         /**
+         * ブロックが除外クラスの配下にあるかチェック
+         */
+        isExcluded: function(clientId) {
+            const excludeClasses = config.longParagraphExcludeClasses || [];
+            if (excludeClasses.length === 0) return false;
+
+            const blockElement = document.querySelector(`[data-block="${clientId}"]`);
+            if (!blockElement) return false;
+
+            // 親要素を辿って除外クラスを持つ要素があるかチェック
+            let parent = blockElement.parentElement;
+            while (parent) {
+                for (const className of excludeClasses) {
+                    if (parent.classList && parent.classList.contains(className)) {
+                        return true;
+                    }
+                }
+                parent = parent.parentElement;
+            }
+
+            return false;
+        },
+
+        /**
          * 長い段落ブロックを検出
          */
         findLongParagraphs: function() {
+            const self = this;
             const blocks = select('core/block-editor').getBlocks();
             const threshold = config.longParagraphThreshold || 200;
             const issues = [];
@@ -528,10 +553,13 @@
                         const plainText = content.replace(/<[^>]*>/g, '');
 
                         if (plainText.length >= threshold) {
-                            issues.push({
-                                clientId: block.clientId,
-                                charCount: plainText.length
-                            });
+                            // 除外クラスの配下でないかチェック
+                            if (!self.isExcluded(block.clientId)) {
+                                issues.push({
+                                    clientId: block.clientId,
+                                    charCount: plainText.length
+                                });
+                            }
                         }
                     }
 
