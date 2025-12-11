@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.7.2
+ * Version: 1.7.3
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.7.2';
+    const VERSION = '1.7.3';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -1682,8 +1682,17 @@ class Intelligent_Checker {
             return;
         }
 
-        $errors = $this->get_post_errors( $post_id );
-        $total = array_sum( $errors );
+        // キャッシュされたエラー数を取得
+        $cached_total = get_post_meta( $post_id, '_ic_error_count', true );
+
+        // メタデータがない場合は計算して保存
+        if ( $cached_total === '' ) {
+            $errors = $this->get_post_errors( $post_id );
+            $total = array_sum( $errors );
+            update_post_meta( $post_id, '_ic_error_count', $total );
+        } else {
+            $total = (int) $cached_total;
+        }
 
         if ( $total === 0 ) {
             echo '<span style="color: #999;">—</span>';
@@ -1709,7 +1718,13 @@ class Intelligent_Checker {
      * エラー数でソート
      */
     public function sort_by_error_count( $query ) {
+        global $pagenow;
+
         if ( ! is_admin() || ! $query->is_main_query() ) {
+            return;
+        }
+
+        if ( $pagenow !== 'edit.php' ) {
             return;
         }
 
@@ -1717,8 +1732,20 @@ class Intelligent_Checker {
             return;
         }
 
-        $query->set( 'meta_key', '_ic_error_count' );
-        $query->set( 'orderby', 'meta_value_num' );
+        // メタデータがない投稿も含めてソートするためにmeta_queryを使用
+        $query->set( 'meta_query', array(
+            'relation' => 'OR',
+            'error_count_exists' => array(
+                'key'     => '_ic_error_count',
+                'compare' => 'EXISTS',
+                'type'    => 'NUMERIC',
+            ),
+            'error_count_not_exists' => array(
+                'key'     => '_ic_error_count',
+                'compare' => 'NOT EXISTS',
+            ),
+        ) );
+        $query->set( 'orderby', 'error_count_exists' );
     }
 
     /**
