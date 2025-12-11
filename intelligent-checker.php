@@ -1,11 +1,8 @@
 <?php
 /**
  * Plugin Name: Intelligent Checker
- * Plugin URI: https://example.com/intelligent-checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.1.0
- * Author: Your Name
- * Author URI: https://example.com
+ * Version: 1.1.1
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -21,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.1.0';
+    const VERSION = '1.1.1';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -72,6 +69,10 @@ class Intelligent_Checker {
         // 作成者フィルター
         add_action( 'restrict_manage_posts', array( $this, 'add_creator_filter_dropdown' ) );
         add_action( 'pre_get_posts', array( $this, 'filter_posts_by_creator' ) );
+
+        // 一括編集
+        add_action( 'bulk_edit_custom_box', array( $this, 'add_creator_bulk_edit' ), 10, 2 );
+        add_action( 'wp_ajax_save_bulk_creator', array( $this, 'save_bulk_creator' ) );
     }
 
     /**
@@ -916,6 +917,7 @@ class Intelligent_Checker {
     private function get_quick_edit_script() {
         return "
         (function($) {
+            // クイック編集
             var originalInlineEdit = inlineEditPost.edit;
             inlineEditPost.edit = function(id) {
                 originalInlineEdit.apply(this, arguments);
@@ -932,6 +934,36 @@ class Intelligent_Checker {
                     editRow.find('select[name=\"ic_creator\"]').val(creatorId);
                 }
             };
+
+            // 一括編集
+            $(document).on('click', '#bulk_edit', function() {
+                var bulkRow = $('#bulk-edit');
+                var creatorVal = bulkRow.find('select[name=\"ic_creator_bulk\"]').val();
+
+                if (creatorVal === '-1') {
+                    return;
+                }
+
+                var postIds = [];
+                bulkRow.find('#bulk-titles-list .button-link').each(function() {
+                    postIds.push($(this).attr('id').replace('_', ''));
+                });
+
+                if (postIds.length === 0) {
+                    return;
+                }
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'save_bulk_creator',
+                        post_ids: postIds,
+                        ic_creator_bulk: creatorVal,
+                        _inline_edit: $('#_inline_edit').val()
+                    }
+                });
+            });
         })(jQuery);
         ";
     }
@@ -985,6 +1017,64 @@ class Intelligent_Checker {
             $query->set( 'meta_key', '_ic_creator' );
             $query->set( 'meta_value', $creator_id );
         }
+    }
+
+    /**
+     * 一括編集に作成者フィールドを追加
+     */
+    public function add_creator_bulk_edit( $column_name, $post_type ) {
+        if ( $column_name !== 'ic_creator' || $post_type !== 'post' ) {
+            return;
+        }
+
+        $users = get_users( array(
+            'orderby' => 'display_name',
+            'order'   => 'ASC',
+        ) );
+        ?>
+        <fieldset class="inline-edit-col-right">
+            <div class="inline-edit-col">
+                <label class="inline-edit-group">
+                    <span class="title">作成者</span>
+                    <select name="ic_creator_bulk">
+                        <option value="-1">— 変更しない —</option>
+                        <option value="0">— 未設定にする —</option>
+                        <?php foreach ( $users as $user ) : ?>
+                            <option value="<?php echo esc_attr( $user->ID ); ?>">
+                                <?php echo esc_html( $user->display_name ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+        </fieldset>
+        <?php
+    }
+
+    /**
+     * 一括編集の保存処理（Ajax）
+     */
+    public function save_bulk_creator() {
+        check_ajax_referer( 'inlineeditnonce', '_inline_edit' );
+
+        if ( ! current_user_can( 'edit_posts' ) ) {
+            wp_die( -1 );
+        }
+
+        $post_ids = isset( $_POST['post_ids'] ) ? array_map( 'absint', $_POST['post_ids'] ) : array();
+        $creator_id = isset( $_POST['ic_creator_bulk'] ) ? intval( $_POST['ic_creator_bulk'] ) : -1;
+
+        if ( empty( $post_ids ) || $creator_id === -1 ) {
+            wp_die( -1 );
+        }
+
+        foreach ( $post_ids as $post_id ) {
+            if ( current_user_can( 'edit_post', $post_id ) ) {
+                update_post_meta( $post_id, '_ic_creator', $creator_id );
+            }
+        }
+
+        wp_die( 1 );
     }
 }
 
