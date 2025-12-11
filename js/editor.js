@@ -9,6 +9,8 @@
     const { createElement, useState, useEffect } = wp.element;
     const { registerPlugin } = wp.plugins;
     const { PluginDocumentSettingPanel } = wp.editPost;
+    const { SelectControl } = wp.components;
+    const { useEntityProp } = wp.coreData;
 
     // 設定を取得
     const config = window.intelligentCheckerConfig || {};
@@ -820,6 +822,25 @@
         const [headingTree, setHeadingTree] = useState([]);
         const [copyFeedback, setCopyFeedback] = useState(null);
 
+        // 作成者用のstate
+        const [users, setUsers] = useState([]);
+        const postType = wp.data.useSelect(sel => sel('core/editor').getCurrentPostType(), []);
+        const [meta, setMeta] = useEntityProp('postType', postType, 'meta');
+        const creatorId = meta?._ic_creator || 0;
+
+        // ユーザー一覧を取得
+        useEffect(() => {
+            if (postType !== 'post') return;
+
+            wp.apiFetch({ path: '/intelligent-checker/v1/users' })
+                .then(data => {
+                    setUsers(data || []);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch users:', err);
+                });
+        }, [postType]);
+
         // タイトルを監視
         const postTitle = wp.data.useSelect(function(sel) {
             return sel('core/editor').getEditedPostAttribute('title') || '';
@@ -933,6 +954,40 @@
 
         // パネル配列を構築
         const panels = [];
+
+        // 作成者パネル（投稿のみ）
+        if (postType === 'post') {
+            const userOptions = [
+                { value: '0', label: '-- 選択してください --' },
+                ...users.map(user => ({
+                    value: String(user.id),
+                    label: user.display_name || user.user_login
+                }))
+            ];
+
+            panels.push(
+                createElement(
+                    PluginDocumentSettingPanel,
+                    {
+                        key: 'creator-panel',
+                        name: 'intelligent-checker-creator-panel',
+                        title: '作成者',
+                        className: 'ic-creator-panel'
+                    },
+                    createElement(
+                        SelectControl,
+                        {
+                            label: '作成者を選択',
+                            value: String(creatorId),
+                            options: userOptions,
+                            onChange: (value) => {
+                                setMeta({ ...meta, _ic_creator: parseInt(value, 10) });
+                            }
+                        }
+                    )
+                )
+            );
+        }
 
         // ALTパネル
         if (config.altCheckerEnabled && images.length > 0) {
