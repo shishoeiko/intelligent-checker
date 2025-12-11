@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.8.1
+ * Version: 1.8.2
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.8.1';
+    const VERSION = '1.8.2';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -1669,11 +1669,23 @@ class Intelligent_Checker {
         // このブロックが除外クラスを持っているかチェック
         $block_is_excluded = $is_excluded;
         if ( ! $block_is_excluded && ! empty( $exclude_classes ) ) {
+            // 1. attrs.className をチェック（ユーザーが追加したクラス）
             $block_class = isset( $block['attrs']['className'] ) ? $block['attrs']['className'] : '';
             foreach ( $exclude_classes as $exclude_class ) {
                 if ( ! empty( $exclude_class ) && strpos( $block_class, $exclude_class ) !== false ) {
                     $block_is_excluded = true;
                     break;
+                }
+            }
+
+            // 2. innerHTML をチェック（テーマが自動で追加するクラス、例: swell-block-accordion__body）
+            if ( ! $block_is_excluded ) {
+                $inner_html = isset( $block['innerHTML'] ) ? $block['innerHTML'] : '';
+                foreach ( $exclude_classes as $exclude_class ) {
+                    if ( ! empty( $exclude_class ) && strpos( $inner_html, 'class=' ) !== false && strpos( $inner_html, $exclude_class ) !== false ) {
+                        $block_is_excluded = true;
+                        break;
+                    }
                 }
             }
         }
