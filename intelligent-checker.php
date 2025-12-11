@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.8.2
+ * Version: 1.9.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.8.2';
+    const VERSION = '1.9.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -122,6 +122,9 @@ class Intelligent_Checker {
             'caution_keywords' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
             // 要注意キーワードチェック設定（H2見出し用）
             'caution_keywords_heading' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
+            // 禁止文字・文言チェック設定（投稿全体）
+            'banned_patterns_enabled' => true,
+            'banned_patterns' => "**",
             // 投稿一覧エラー表示設定
             'post_list_error_column_enabled' => true,
             'post_list_show_forbidden_keyword_title' => true,
@@ -133,6 +136,7 @@ class Intelligent_Checker {
             'post_list_show_featured_image' => true,
             'post_list_show_alt_missing' => true,
             'post_list_show_long_paragraph' => true,
+            'post_list_show_banned_patterns' => true,
         );
     }
 
@@ -236,6 +240,10 @@ class Intelligent_Checker {
         // 要注意キーワードチェック設定（H2見出し用）
         $sanitized['caution_keywords_heading'] = isset( $input['caution_keywords_heading'] ) ? sanitize_textarea_field( $input['caution_keywords_heading'] ) : '';
 
+        // 禁止文字・文言チェック設定（投稿全体）
+        $sanitized['banned_patterns_enabled'] = ! empty( $input['banned_patterns_enabled'] );
+        $sanitized['banned_patterns'] = isset( $input['banned_patterns'] ) ? sanitize_textarea_field( $input['banned_patterns'] ) : '';
+
         // 投稿一覧エラー表示設定
         $sanitized['post_list_error_column_enabled'] = ! empty( $input['post_list_error_column_enabled'] );
         $sanitized['post_list_show_forbidden_keyword_title'] = ! empty( $input['post_list_show_forbidden_keyword_title'] );
@@ -247,6 +255,7 @@ class Intelligent_Checker {
         $sanitized['post_list_show_featured_image'] = ! empty( $input['post_list_show_featured_image'] );
         $sanitized['post_list_show_alt_missing'] = ! empty( $input['post_list_show_alt_missing'] );
         $sanitized['post_list_show_long_paragraph'] = ! empty( $input['post_list_show_long_paragraph'] );
+        $sanitized['post_list_show_banned_patterns'] = ! empty( $input['post_list_show_banned_patterns'] );
 
         return $sanitized;
     }
@@ -447,6 +456,17 @@ class Intelligent_Checker {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>禁止文字・文言チェッカー</strong>
+                                <span>投稿全体（タイトル、見出し、本文）に禁止文字・文言が含まれている場合にアラートを表示します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[banned_patterns_enabled]" value="1" <?php checked( $settings['banned_patterns_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -522,6 +542,13 @@ class Intelligent_Checker {
                         <p class="description">1行に1つずつキーワードを入力してください。H2見出しにこれらのキーワードが含まれている場合に黄色のアラートを表示します。空の場合はチェックされません。</p>
                     </div>
 
+                    <!-- 禁止文字・文言（投稿全体） -->
+                    <div class="form-section">
+                        <h2>禁止文字・文言（投稿全体）</h2>
+                        <textarea name="intelligent_checker_settings[banned_patterns]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['banned_patterns'] ); ?></textarea>
+                        <p class="description">1行に1つずつ文字・文言を入力してください。投稿全体（タイトル、見出し、本文）にこれらが含まれている場合に赤色のアラートを表示します。例: ** （Markdown太字記法の消し忘れ検出）</p>
+                    </div>
+
                     <!-- 長文段落チェック: 閾値設定 -->
                     <div class="form-section">
                         <h2>長文段落チェック: 閾値設定</h2>
@@ -582,6 +609,10 @@ class Intelligent_Checker {
                         <label style="display: block; margin-bottom: 5px;">
                             <input type="checkbox" name="intelligent_checker_settings[post_list_show_long_paragraph]" value="1" <?php checked( $settings['post_list_show_long_paragraph'] ); ?>>
                             長文段落
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_banned_patterns]" value="1" <?php checked( $settings['post_list_show_banned_patterns'] ); ?>>
+                            禁止文字・文言
                         </label>
                         <p style="margin-top: 15px;">
                             <a href="<?php echo wp_nonce_url( admin_url( 'options-general.php?page=intelligent-checker-settings&ic_recalculate_errors=1' ), 'ic_recalculate_errors' ); ?>" class="button button-secondary">エラー数を再計算</a>
@@ -659,6 +690,8 @@ class Intelligent_Checker {
             'cautionKeywordEnabled'          => (bool) $settings['caution_keyword_enabled'],
             'cautionKeywords'                => $this->text_to_array( $settings['caution_keywords'] ),
             'cautionKeywordsHeading'         => $this->text_to_array( $settings['caution_keywords_heading'] ),
+            'bannedPatternsEnabled'          => (bool) $settings['banned_patterns_enabled'],
+            'bannedPatterns'                 => $this->text_to_array( $settings['banned_patterns'] ),
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -727,6 +760,10 @@ class Intelligent_Checker {
                 'headingCautionKeywordTitle' => __( 'H2見出しに要注意キーワードが含まれています', 'intelligent-checker' ),
                 'headingCautionKeywordDesc'  => __( '以下の見出しに要注意キーワードが含まれています。問題がないか確認してください。', 'intelligent-checker' ),
                 'headingCautionKeywordCheck' => __( '見出しを確認', 'intelligent-checker' ),
+                // Banned Patterns Checker
+                'bannedPatternsTitle' => __( '投稿内に禁止文字・文言が含まれています', 'intelligent-checker' ),
+                'bannedPatternsDesc'  => __( '以下の禁止文字・文言が検出されました。削除または修正してください。', 'intelligent-checker' ),
+                'bannedPatternsCheck' => __( '該当箇所を確認', 'intelligent-checker' ),
             ),
         ) );
     }
@@ -1414,6 +1451,14 @@ class Intelligent_Checker {
             }
         }
 
+        // 禁止文字・文言チェック
+        if ( $settings['post_list_show_banned_patterns'] ) {
+            $count = $this->check_banned_patterns_in_post( $post->post_title, $post->post_content );
+            if ( $count > 0 ) {
+                $errors['banned_patterns'] = $count;
+            }
+        }
+
         return $errors;
     }
 
@@ -1505,6 +1550,71 @@ class Intelligent_Checker {
                         break;
                     }
                 }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * 禁止文字・文言をチェック（投稿全体）
+     */
+    private function check_banned_patterns_in_post( $title, $content ) {
+        $settings = $this->get_settings();
+        $patterns = $this->text_to_array( $settings['banned_patterns'] );
+        $count = 0;
+
+        if ( empty( $patterns ) ) {
+            return 0;
+        }
+
+        // タイトルをチェック
+        foreach ( $patterns as $pattern ) {
+            if ( empty( $pattern ) ) {
+                continue;
+            }
+            if ( mb_strpos( $title, $pattern ) !== false ) {
+                $count++;
+            }
+        }
+
+        // コンテンツをチェック（ブロックを解析）
+        $blocks = parse_blocks( $content );
+        foreach ( $blocks as $block ) {
+            $count += $this->check_banned_patterns_in_block( $block, $patterns );
+        }
+
+        return $count;
+    }
+
+    /**
+     * ブロック内の禁止文字・文言を再帰的にチェック
+     */
+    private function check_banned_patterns_in_block( $block, $patterns ) {
+        $count = 0;
+        $content = '';
+
+        // テキストを含むブロックタイプをチェック
+        if ( in_array( $block['blockName'], array( 'core/heading', 'core/paragraph', 'core/list-item' ), true ) ) {
+            $inner_html = isset( $block['innerHTML'] ) ? $block['innerHTML'] : '';
+            $content = wp_strip_all_tags( $inner_html );
+        }
+
+        if ( ! empty( $content ) ) {
+            foreach ( $patterns as $pattern ) {
+                if ( empty( $pattern ) ) {
+                    continue;
+                }
+                if ( mb_strpos( $content, $pattern ) !== false ) {
+                    $count++;
+                }
+            }
+        }
+
+        // 内部ブロックを再帰的にチェック
+        if ( ! empty( $block['innerBlocks'] ) ) {
+            foreach ( $block['innerBlocks'] as $inner_block ) {
+                $count += $this->check_banned_patterns_in_block( $inner_block, $patterns );
             }
         }
 

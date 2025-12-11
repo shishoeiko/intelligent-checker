@@ -1222,6 +1222,174 @@
     };
 
     // ========================================
+    // Banned Patterns Checker Module
+    // ========================================
+    const BannedPatternsChecker = {
+        /**
+         * 投稿全体から禁止文字・文言を検出
+         */
+        findBannedPatterns: function() {
+            const patterns = config.bannedPatterns || [];
+            if (patterns.length === 0) return [];
+
+            const blocks = select('core/block-editor').getBlocks();
+            const title = select('core/editor').getEditedPostAttribute('title') || '';
+            const issues = [];
+
+            // タイトルをチェック
+            patterns.forEach(pattern => {
+                if (!pattern) return;
+                if (title.includes(pattern)) {
+                    issues.push({
+                        type: 'title',
+                        pattern: pattern,
+                        text: title,
+                        clientId: null
+                    });
+                }
+            });
+
+            // ブロックコンテンツをチェック
+            function checkBlocks(blocks) {
+                blocks.forEach(block => {
+                    let content = '';
+                    let blockType = '';
+
+                    if (block.name === 'core/heading') {
+                        content = block.attributes.content || '';
+                        blockType = 'heading';
+                    } else if (block.name === 'core/paragraph') {
+                        content = block.attributes.content || '';
+                        blockType = 'paragraph';
+                    } else if (block.name === 'core/list-item') {
+                        content = block.attributes.content || '';
+                        blockType = 'list';
+                    }
+
+                    if (content) {
+                        const plainText = content.replace(/<[^>]*>/g, '');
+                        patterns.forEach(pattern => {
+                            if (!pattern) return;
+                            if (plainText.includes(pattern)) {
+                                issues.push({
+                                    type: blockType,
+                                    pattern: pattern,
+                                    text: plainText.substring(0, 50) + (plainText.length > 50 ? '...' : ''),
+                                    clientId: block.clientId
+                                });
+                            }
+                        });
+                    }
+
+                    if (block.innerBlocks && block.innerBlocks.length > 0) {
+                        checkBlocks(block.innerBlocks);
+                    }
+                });
+            }
+
+            checkBlocks(blocks);
+            return issues;
+        },
+
+        /**
+         * 該当ブロックにハイライト表示
+         */
+        updateHighlights: function(issues) {
+            // 既存のハイライトを削除
+            document.querySelectorAll('.ic-banned-pattern-highlight').forEach(el => {
+                el.classList.remove('ic-banned-pattern-highlight');
+            });
+
+            // 該当ブロックにハイライトを追加
+            issues.forEach(issue => {
+                if (issue.clientId) {
+                    const blockElement = document.querySelector(`[data-block="${issue.clientId}"]`);
+                    if (blockElement) {
+                        blockElement.classList.add('ic-banned-pattern-highlight');
+                    }
+                }
+            });
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-banned-patterns-alert-banner').forEach(el => el.remove());
+
+            const issues = this.findBannedPatterns();
+
+            // ハイライトを更新
+            this.updateHighlights(issues);
+
+            // 問題がなければ何もしない
+            if (issues.length === 0) {
+                return;
+            }
+
+            // 検出されたパターンをユニークにまとめる
+            const uniquePatterns = [...new Set(issues.map(i => i.pattern))];
+            const patternsDisplay = uniquePatterns.map(p => `「${p}」`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-banned-patterns-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-banned-patterns-alert-content">
+                    <div class="ic-banned-patterns-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="ic-banned-patterns-alert-text">
+                        <p class="ic-banned-patterns-alert-title">
+                            <strong>${l10n.bannedPatternsTitle || '投稿内に禁止文字・文言が含まれています'}</strong>
+                        </p>
+                        <p class="ic-banned-patterns-alert-desc">
+                            ${l10n.bannedPatternsDesc || '以下の禁止文字・文言が検出されました。削除または修正してください。'}
+                            <br>
+                            <span class="ic-banned-patterns-list">検出: ${patternsDisplay}（${issues.length}箇所）</span>
+                        </p>
+                    </div>
+                </div>
+                <button class="ic-banned-patterns-alert-button" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    ${l10n.bannedPatternsCheck || '該当箇所を確認'}
+                </button>
+            `;
+
+            // ボタンクリックで最初の問題箇所にスクロール
+            banner.querySelector('.ic-banned-patterns-alert-button').addEventListener('click', () => {
+                const firstIssueWithBlock = issues.find(i => i.clientId);
+                if (firstIssueWithBlock) {
+                    dispatch('core/block-editor').selectBlock(firstIssueWithBlock.clientId);
+
+                    const blockElement = document.querySelector(`[data-block="${firstIssueWithBlock.clientId}"]`);
+                    if (blockElement) {
+                        blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Duplicate Keyword Checker Module
     // ========================================
     const DuplicateKeywordChecker = {
@@ -1714,6 +1882,11 @@
                 // Heading Caution Keyword Checker (H2見出しの要注意キーワードチェック)
                 if (config.cautionKeywordsHeading && config.cautionKeywordsHeading.length > 0) {
                     HeadingCautionKeywordChecker.updateAlertBanner();
+                }
+
+                // Banned Patterns Checker (禁止文字・文言チェック)
+                if (config.bannedPatternsEnabled && config.bannedPatterns && config.bannedPatterns.length > 0) {
+                    BannedPatternsChecker.updateAlertBanner();
                 }
             };
 
