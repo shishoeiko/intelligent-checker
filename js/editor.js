@@ -661,6 +661,135 @@
     };
 
     // ========================================
+    // Slug Checker Module
+    // ========================================
+    const SlugChecker = {
+        /**
+         * スラッグが有効かどうかを判定（英数字とハイフンのみ許可、数字のみは不可）
+         */
+        isValidSlug: function(slug) {
+            if (!slug || slug === '') {
+                return true; // 空は問題なし
+            }
+            // 英数字とハイフンのみ許可（アンダーバーは不可）
+            if (!/^[a-zA-Z0-9-]+$/.test(slug)) {
+                return false;
+            }
+            // 数字のみは不可
+            if (/^[0-9]+$/.test(slug)) {
+                return false;
+            }
+            return true;
+        },
+
+        /**
+         * 数字のみかどうかを判定
+         */
+        isNumbersOnly: function(slug) {
+            return /^[0-9]+$/.test(slug);
+        },
+
+        /**
+         * 無効な文字を検出して返す
+         */
+        getInvalidChars: function(slug) {
+            if (!slug) return [];
+            const invalidChars = slug.match(/[^a-zA-Z0-9-]/g) || [];
+            return [...new Set(invalidChars)]; // 重複を除去
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function(slug) {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-slug-alert-banner').forEach(el => el.remove());
+
+            // スラッグ入力欄のハイライトを削除
+            document.querySelectorAll('.ic-slug-invalid').forEach(el => {
+                el.classList.remove('ic-slug-invalid');
+            });
+
+            // 有効なスラッグなら何もしない
+            if (this.isValidSlug(slug)) {
+                return;
+            }
+
+            const isNumbersOnly = this.isNumbersOnly(slug);
+            const invalidChars = this.getInvalidChars(slug);
+            const invalidCharsDisplay = invalidChars.map(c => `「${c}」`).join(' ');
+
+            let alertTitle, alertDesc;
+            if (isNumbersOnly) {
+                alertTitle = l10n.slugNumbersOnlyTitle || 'スラッグが数字のみになっています';
+                alertDesc = l10n.slugNumbersOnlyDesc || 'スラッグには英字を含めてください';
+            } else if (invalidChars.length > 0) {
+                alertTitle = l10n.slugAlertTitle || 'スラッグに使用できない文字が含まれています';
+                alertDesc = `${l10n.slugAlertDesc || '英数字とハイフン（-）のみ使用できます'}<br><span class="ic-slug-invalid-chars">${l10n.slugInvalidChars || '無効な文字'}: ${invalidCharsDisplay}</span>`;
+            } else {
+                alertTitle = l10n.slugAlertTitle || 'スラッグに使用できない文字が含まれています';
+                alertDesc = l10n.slugAlertDesc || '英数字とハイフン（-）のみ使用できます';
+            }
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-slug-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-slug-alert-content">
+                    <div class="ic-slug-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="ic-slug-alert-text">
+                        <p class="ic-slug-alert-title">
+                            <strong>${alertTitle}</strong>
+                        </p>
+                        <p class="ic-slug-alert-desc">
+                            ${alertDesc}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+
+            // スラッグ入力欄をハイライト
+            this.highlightSlugInput();
+        },
+
+        /**
+         * スラッグ入力欄をハイライト
+         */
+        highlightSlugInput: function() {
+            // パーマリンクパネル内のスラッグ入力欄を探す
+            const slugInputs = document.querySelectorAll('.editor-post-url input, .edit-post-post-url__input, input[id*="post-slug"], .editor-post-slug input');
+            slugInputs.forEach(input => {
+                input.classList.add('ic-slug-invalid');
+            });
+
+            // サイドバーのURLパネル
+            const urlPanel = document.querySelector('.editor-post-url__panel-content');
+            if (urlPanel) {
+                const input = urlPanel.querySelector('input');
+                if (input) {
+                    input.classList.add('ic-slug-invalid');
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Heading Structure Checker Module
     // ========================================
     const HeadingStructureChecker = {
@@ -880,6 +1009,36 @@
                     const allHeadings = HeadingStructureChecker.getAllHeadings();
                     setHeadings(allHeadings);
                     setHeadingTree(HeadingStructureChecker.buildHeadingTree(allHeadings));
+                }
+
+                // Slug Checker
+                if (config.slugCheckerEnabled) {
+                    // パーマリンクからスラッグを抽出（データベースの値を使用）
+                    const permalink = select('core/editor').getPermalink();
+                    const editedSlug = select('core/editor').getEditedPostAttribute('slug');
+                    const currentPost = select('core/editor').getCurrentPost();
+
+                    let slugToCheck = '';
+
+                    // 編集中のスラッグがあればそれを使用
+                    if (editedSlug) {
+                        slugToCheck = editedSlug;
+                    }
+                    // パーマリンクからスラッグを抽出
+                    else if (permalink) {
+                        // パーマリンクからスラッグ部分を抽出
+                        const url = new URL(permalink);
+                        const pathParts = url.pathname.split('/').filter(p => p);
+                        if (pathParts.length > 0) {
+                            slugToCheck = pathParts[pathParts.length - 1];
+                        }
+                    }
+                    // 投稿オブジェクトからスラッグを取得
+                    else if (currentPost && currentPost.slug) {
+                        slugToCheck = currentPost.slug;
+                    }
+
+                    SlugChecker.updateAlertBanner(slugToCheck);
                 }
             };
 

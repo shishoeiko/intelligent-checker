@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.1.1
+ * Version: 1.2.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.1.1';
+    const VERSION = '1.2.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -97,6 +97,8 @@ class Intelligent_Checker {
             'long_paragraph_exclude_classes' => '',
             // 見出し構造チェック設定
             'heading_structure_enabled' => true,
+            // スラッグチェック設定
+            'slug_checker_enabled' => true,
         );
     }
 
@@ -175,6 +177,9 @@ class Intelligent_Checker {
 
         // 見出し構造チェック設定
         $sanitized['heading_structure_enabled'] = ! empty( $input['heading_structure_enabled'] );
+
+        // スラッグチェック設定
+        $sanitized['slug_checker_enabled'] = ! empty( $input['slug_checker_enabled'] );
 
         return $sanitized;
     }
@@ -320,6 +325,17 @@ class Intelligent_Checker {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>スラッグチェッカー</strong>
+                                <span>記事URLのスラッグに英数字・ハイフン以外の文字（アンダーバー等）が含まれている場合にエラーを表示します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[slug_checker_enabled]" value="1" <?php checked( $settings['slug_checker_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -434,6 +450,7 @@ class Intelligent_Checker {
             'titleCheckerEnabled'     => (bool) $settings['title_checker_enabled'],
             'longParagraphEnabled'        => (bool) $settings['long_paragraph_enabled'],
             'headingStructureEnabled'     => (bool) $settings['heading_structure_enabled'],
+            'slugCheckerEnabled'          => (bool) $settings['slug_checker_enabled'],
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -472,6 +489,12 @@ class Intelligent_Checker {
                 'copySuccess'       => __( 'コピーしました', 'intelligent-checker' ),
                 'copyError'         => __( 'コピーに失敗しました', 'intelligent-checker' ),
                 'emptyHeading'      => __( '(空の見出し)', 'intelligent-checker' ),
+                // Slug Checker
+                'slugAlertTitle'       => __( 'スラッグに使用できない文字が含まれています', 'intelligent-checker' ),
+                'slugAlertDesc'        => __( '英数字とハイフン（-）のみ使用できます', 'intelligent-checker' ),
+                'slugInvalidChars'     => __( '無効な文字', 'intelligent-checker' ),
+                'slugNumbersOnlyTitle' => __( 'スラッグが数字のみになっています', 'intelligent-checker' ),
+                'slugNumbersOnlyDesc'  => __( 'スラッグには英字を含めてください', 'intelligent-checker' ),
             ),
         ) );
     }
