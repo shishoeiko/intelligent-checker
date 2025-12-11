@@ -661,6 +661,65 @@
     };
 
     // ========================================
+    // Featured Image Checker Module
+    // ========================================
+    const FeaturedImageChecker = {
+        /**
+         * アイキャッチ画像が設定されているかチェック
+         */
+        hasFeaturedImage: function() {
+            const featuredImageId = select('core/editor').getEditedPostAttribute('featured_media');
+            return featuredImageId && featuredImageId > 0;
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-featured-image-alert-banner').forEach(el => el.remove());
+
+            // アイキャッチ画像が設定されていれば何もしない
+            if (this.hasFeaturedImage()) {
+                return;
+            }
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-featured-image-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-featured-image-alert-content">
+                    <div class="ic-featured-image-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </div>
+                    <div class="ic-featured-image-alert-text">
+                        <p class="ic-featured-image-alert-title">
+                            <strong>${l10n.featuredImageTitle || 'アイキャッチ画像が設定されていません'}</strong>
+                        </p>
+                        <p class="ic-featured-image-alert-desc">
+                            ${l10n.featuredImageDesc || '記事の見栄えを良くするため、アイキャッチ画像を設定してください'}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Duplicate Keyword Checker Module
     // ========================================
     const DuplicateKeywordChecker = {
@@ -1126,6 +1185,11 @@
                 if (config.duplicateKeywordEnabled) {
                     const currentTitle = select('core/editor').getEditedPostAttribute('title') || '';
                     DuplicateKeywordChecker.updateAlertBanner(currentTitle);
+                }
+
+                // Featured Image Checker
+                if (config.featuredImageCheckerEnabled) {
+                    FeaturedImageChecker.updateAlertBanner();
                 }
             };
 
