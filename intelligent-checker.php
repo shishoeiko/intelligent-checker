@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.6.1
+ * Version: 1.7.1
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.6.1';
+    const VERSION = '1.7.1';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -73,6 +73,14 @@ class Intelligent_Checker {
         // 一括編集
         add_action( 'bulk_edit_custom_box', array( $this, 'add_creator_bulk_edit' ), 10, 2 );
         add_action( 'wp_ajax_save_bulk_creator', array( $this, 'save_bulk_creator' ) );
+
+        // 投稿一覧エラーカラム
+        add_filter( 'manage_posts_columns', array( $this, 'add_error_column' ), 20 );
+        add_action( 'manage_posts_custom_column', array( $this, 'render_error_column' ), 10, 2 );
+        add_filter( 'manage_edit-post_sortable_columns', array( $this, 'add_error_sortable_column' ) );
+        add_action( 'pre_get_posts', array( $this, 'sort_by_error_count' ) );
+        add_action( 'save_post', array( $this, 'update_error_count_meta' ), 20 );
+        add_action( 'admin_init', array( $this, 'handle_recalculate_errors' ) );
     }
 
     /**
@@ -110,6 +118,17 @@ class Intelligent_Checker {
             // 要注意キーワードチェック設定
             'caution_keyword_enabled' => true,
             'caution_keywords' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
+            // 投稿一覧エラー表示設定
+            'post_list_error_column_enabled' => true,
+            'post_list_show_forbidden_keyword_title' => true,
+            'post_list_show_forbidden_keyword_heading' => true,
+            'post_list_show_caution_keyword_title' => true,
+            'post_list_show_caution_keyword_heading' => true,
+            'post_list_show_duplicate_keyword' => true,
+            'post_list_show_slug_error' => true,
+            'post_list_show_featured_image' => true,
+            'post_list_show_alt_missing' => true,
+            'post_list_show_long_paragraph' => true,
         );
     }
 
@@ -206,6 +225,18 @@ class Intelligent_Checker {
         // 要注意キーワードチェック設定
         $sanitized['caution_keyword_enabled'] = ! empty( $input['caution_keyword_enabled'] );
         $sanitized['caution_keywords'] = isset( $input['caution_keywords'] ) ? sanitize_textarea_field( $input['caution_keywords'] ) : '';
+
+        // 投稿一覧エラー表示設定
+        $sanitized['post_list_error_column_enabled'] = ! empty( $input['post_list_error_column_enabled'] );
+        $sanitized['post_list_show_forbidden_keyword_title'] = ! empty( $input['post_list_show_forbidden_keyword_title'] );
+        $sanitized['post_list_show_forbidden_keyword_heading'] = ! empty( $input['post_list_show_forbidden_keyword_heading'] );
+        $sanitized['post_list_show_caution_keyword_title'] = ! empty( $input['post_list_show_caution_keyword_title'] );
+        $sanitized['post_list_show_caution_keyword_heading'] = ! empty( $input['post_list_show_caution_keyword_heading'] );
+        $sanitized['post_list_show_duplicate_keyword'] = ! empty( $input['post_list_show_duplicate_keyword'] );
+        $sanitized['post_list_show_slug_error'] = ! empty( $input['post_list_show_slug_error'] );
+        $sanitized['post_list_show_featured_image'] = ! empty( $input['post_list_show_featured_image'] );
+        $sanitized['post_list_show_alt_missing'] = ! empty( $input['post_list_show_alt_missing'] );
+        $sanitized['post_list_show_long_paragraph'] = ! empty( $input['post_list_show_long_paragraph'] );
 
         return $sanitized;
     }
@@ -484,6 +515,59 @@ class Intelligent_Checker {
                         <p class="description">1行に1つずつクラス名を入力してください。これらのクラスを持つ要素の配下にある段落はチェック対象から除外されます。</p>
                     </div>
 
+                    <!-- 投稿一覧のエラー表示 -->
+                    <div class="form-section">
+                        <h2>投稿一覧のエラー表示</h2>
+                        <label>
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_error_column_enabled]" value="1" <?php checked( $settings['post_list_error_column_enabled'] ); ?>>
+                            投稿一覧にエラー数カラムを表示
+                        </label>
+                        <p class="description" style="margin-top: 15px; margin-bottom: 8px;">カウントするエラー:</p>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_forbidden_keyword_title]" value="1" <?php checked( $settings['post_list_show_forbidden_keyword_title'] ); ?>>
+                            禁止キーワード（タイトル）
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_forbidden_keyword_heading]" value="1" <?php checked( $settings['post_list_show_forbidden_keyword_heading'] ); ?>>
+                            禁止キーワード（H2見出し）
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_caution_keyword_title]" value="1" <?php checked( $settings['post_list_show_caution_keyword_title'] ); ?>>
+                            要注意キーワード（タイトル）
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_caution_keyword_heading]" value="1" <?php checked( $settings['post_list_show_caution_keyword_heading'] ); ?>>
+                            要注意キーワード（H2見出し）
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_duplicate_keyword]" value="1" <?php checked( $settings['post_list_show_duplicate_keyword'] ); ?>>
+                            重複キーワード（タイトル）
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_slug_error]" value="1" <?php checked( $settings['post_list_show_slug_error'] ); ?>>
+                            スラッグエラー
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_featured_image]" value="1" <?php checked( $settings['post_list_show_featured_image'] ); ?>>
+                            アイキャッチ画像未設定
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_alt_missing]" value="1" <?php checked( $settings['post_list_show_alt_missing'] ); ?>>
+                            ALT未設定画像
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_long_paragraph]" value="1" <?php checked( $settings['post_list_show_long_paragraph'] ); ?>>
+                            長文段落
+                        </label>
+                        <p style="margin-top: 15px;">
+                            <a href="<?php echo wp_nonce_url( admin_url( 'options-general.php?page=intelligent-checker-settings&ic_recalculate_errors=1' ), 'ic_recalculate_errors' ); ?>" class="button button-secondary">エラー数を再計算</a>
+                            <span style="margin-left: 10px; color: #666;">全投稿のエラー数を再計算します（ソート機能に必要）</span>
+                            <?php if ( isset( $_GET['ic_recalculated'] ) ) : ?>
+                                <span style="margin-left: 10px; color: #2e7d32; font-weight: 500;"><?php echo esc_html( absint( $_GET['ic_recalculated'] ) ); ?>件の投稿を再計算しました</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+
                 </div>
 
                 <?php submit_button( '設定を保存' ); ?>
@@ -574,7 +658,8 @@ class Intelligent_Checker {
                 'altStatusSet'     => __( '設定済み', 'intelligent-checker' ),
                 'altStatusMissing' => __( '未設定', 'intelligent-checker' ),
                 // Naked URL Alert
-                'nakedUrlMessage'  => __( 'URLが直書きでリンクされている箇所があります。適切なアンカーテキストに変更することを検討してください。', 'intelligent-checker' ),
+                'nakedUrlTitle'    => __( 'URLが直書きでリンクされている箇所があります', 'intelligent-checker' ),
+                'nakedUrlDesc'     => __( '意図せずURLになっていないかを確認してください', 'intelligent-checker' ),
                 'nakedUrlDetail'   => __( '該当箇所', 'intelligent-checker' ),
                 // Long Paragraph Checker
                 'longParagraphAlertTitle' => __( '件の段落が長すぎます', 'intelligent-checker' ),
@@ -1215,6 +1300,451 @@ class Intelligent_Checker {
         }
 
         wp_die( 1 );
+    }
+
+    /**
+     * 投稿のエラー数を取得
+     */
+    public function get_post_errors( $post_id ) {
+        $errors = array();
+        $post = get_post( $post_id );
+        if ( ! $post ) {
+            return $errors;
+        }
+
+        $settings = $this->get_settings();
+
+        // 禁止キーワード（タイトル）チェック
+        if ( $settings['post_list_show_forbidden_keyword_title'] ) {
+            $count = $this->check_forbidden_keywords_in_text( $post->post_title );
+            if ( $count > 0 ) {
+                $errors['forbidden_title'] = $count;
+            }
+        }
+
+        // 禁止キーワード（H2見出し）チェック
+        if ( $settings['post_list_show_forbidden_keyword_heading'] ) {
+            $count = $this->check_forbidden_keywords_in_headings( $post->post_content );
+            if ( $count > 0 ) {
+                $errors['forbidden_h2'] = $count;
+            }
+        }
+
+        // 要注意キーワード（タイトル）チェック
+        if ( $settings['post_list_show_caution_keyword_title'] ) {
+            $count = $this->check_caution_keywords_in_text( $post->post_title );
+            if ( $count > 0 ) {
+                $errors['caution_title'] = $count;
+            }
+        }
+
+        // 要注意キーワード（H2見出し）チェック
+        if ( $settings['post_list_show_caution_keyword_heading'] ) {
+            $count = $this->check_caution_keywords_in_headings( $post->post_content );
+            if ( $count > 0 ) {
+                $errors['caution_h2'] = $count;
+            }
+        }
+
+        // 重複キーワード（タイトル）チェック
+        if ( $settings['post_list_show_duplicate_keyword'] ) {
+            $count = $this->check_duplicate_keywords_in_title( $post->post_title );
+            if ( $count > 0 ) {
+                $errors['duplicate'] = $count;
+            }
+        }
+
+        // スラッグエラーチェック
+        if ( $settings['post_list_show_slug_error'] ) {
+            if ( $this->check_slug_error( $post->post_name ) ) {
+                $errors['slug'] = 1;
+            }
+        }
+
+        // アイキャッチ画像チェック
+        if ( $settings['post_list_show_featured_image'] ) {
+            if ( ! has_post_thumbnail( $post_id ) ) {
+                $errors['featured_image'] = 1;
+            }
+        }
+
+        // ALT未設定画像チェック
+        if ( $settings['post_list_show_alt_missing'] ) {
+            $count = $this->check_alt_missing_in_content( $post->post_content );
+            if ( $count > 0 ) {
+                $errors['alt_missing'] = $count;
+            }
+        }
+
+        // 長文段落チェック
+        if ( $settings['post_list_show_long_paragraph'] ) {
+            $count = $this->check_long_paragraphs_in_content( $post->post_content );
+            if ( $count > 0 ) {
+                $errors['long_paragraph'] = $count;
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * 禁止キーワードをチェック
+     */
+    private function check_forbidden_keywords_in_text( $text ) {
+        $settings = $this->get_settings();
+        $keywords = $this->text_to_array( $settings['forbidden_keywords'] );
+        $count = 0;
+
+        foreach ( $keywords as $keyword ) {
+            if ( empty( $keyword ) ) {
+                continue;
+            }
+            if ( mb_strpos( $text, $keyword ) !== false ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * 要注意キーワードをチェック
+     */
+    private function check_caution_keywords_in_text( $text ) {
+        $settings = $this->get_settings();
+        $keywords = $this->text_to_array( $settings['caution_keywords'] );
+        $count = 0;
+
+        foreach ( $keywords as $keyword ) {
+            if ( empty( $keyword ) ) {
+                continue;
+            }
+            if ( mb_strpos( $text, $keyword ) !== false ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * H2見出し内の要注意キーワードをチェック
+     */
+    private function check_caution_keywords_in_headings( $content ) {
+        $settings = $this->get_settings();
+        $keywords = $this->text_to_array( $settings['caution_keywords'] );
+        $count = 0;
+
+        // H2見出しを抽出（ブロックとクラシック両対応）
+        if ( preg_match_all( '/<h2[^>]*>(.*?)<\/h2>/is', $content, $matches ) ) {
+            foreach ( $matches[1] as $heading ) {
+                $plain_text = wp_strip_all_tags( $heading );
+                foreach ( $keywords as $keyword ) {
+                    if ( empty( $keyword ) ) {
+                        continue;
+                    }
+                    if ( mb_strpos( $plain_text, $keyword ) !== false ) {
+                        $count++;
+                        break; // 1つの見出しで複数のキーワードがあっても1カウント
+                    }
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * H2見出し内の禁止キーワードをチェック
+     */
+    private function check_forbidden_keywords_in_headings( $content ) {
+        $settings = $this->get_settings();
+        $keywords = $this->text_to_array( $settings['forbidden_keywords'] );
+        $count = 0;
+
+        // H2見出しを抽出（ブロックとクラシック両対応）
+        if ( preg_match_all( '/<h2[^>]*>(.*?)<\/h2>/is', $content, $matches ) ) {
+            foreach ( $matches[1] as $heading ) {
+                $plain_text = wp_strip_all_tags( $heading );
+                foreach ( $keywords as $keyword ) {
+                    if ( empty( $keyword ) ) {
+                        continue;
+                    }
+                    if ( mb_strpos( $plain_text, $keyword ) !== false ) {
+                        $count++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * タイトル内の重複キーワードをチェック
+     */
+    private function check_duplicate_keywords_in_title( $title ) {
+        $settings = $this->get_settings();
+        $keywords = $this->text_to_array( $settings['duplicate_keywords'] );
+        $count = 0;
+
+        foreach ( $keywords as $keyword ) {
+            if ( empty( $keyword ) ) {
+                continue;
+            }
+            $matches = mb_substr_count( $title, $keyword );
+            if ( $matches >= 2 ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * スラッグエラーをチェック
+     */
+    private function check_slug_error( $slug ) {
+        if ( empty( $slug ) ) {
+            return false;
+        }
+
+        // 数字のみはエラー
+        if ( preg_match( '/^[0-9]+$/', $slug ) ) {
+            return true;
+        }
+
+        // 英数字とハイフン以外を含む場合はエラー（アンダーバーはNG）
+        if ( ! preg_match( '/^[a-zA-Z0-9-]+$/', $slug ) ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * コンテンツ内のALT未設定画像をチェック
+     */
+    private function check_alt_missing_in_content( $content ) {
+        $count = 0;
+
+        // ブロックエディタのコンテンツをパース
+        $blocks = parse_blocks( $content );
+
+        foreach ( $blocks as $block ) {
+            $count += $this->check_alt_in_block( $block );
+        }
+
+        return $count;
+    }
+
+    /**
+     * ブロック内のALT未設定画像を再帰的にチェック
+     */
+    private function check_alt_in_block( $block ) {
+        $count = 0;
+
+        if ( $block['blockName'] === 'core/image' ) {
+            if ( empty( $block['attrs']['alt'] ) ) {
+                $count++;
+            }
+        } elseif ( $block['blockName'] === 'core/gallery' ) {
+            if ( ! empty( $block['attrs']['images'] ) ) {
+                foreach ( $block['attrs']['images'] as $image ) {
+                    if ( empty( $image['alt'] ) ) {
+                        $count++;
+                    }
+                }
+            }
+        } elseif ( $block['blockName'] === 'core/cover' ) {
+            if ( ! empty( $block['attrs']['url'] ) && empty( $block['attrs']['alt'] ) ) {
+                $count++;
+            }
+        } elseif ( $block['blockName'] === 'core/media-text' ) {
+            if ( ! empty( $block['attrs']['mediaUrl'] ) && empty( $block['attrs']['mediaAlt'] ) ) {
+                $count++;
+            }
+        }
+
+        // 内部ブロックを再帰的にチェック
+        if ( ! empty( $block['innerBlocks'] ) ) {
+            foreach ( $block['innerBlocks'] as $inner_block ) {
+                $count += $this->check_alt_in_block( $inner_block );
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * コンテンツ内の長文段落をチェック
+     */
+    private function check_long_paragraphs_in_content( $content ) {
+        $settings = $this->get_settings();
+        $threshold = isset( $settings['long_paragraph_threshold'] ) ? absint( $settings['long_paragraph_threshold'] ) : 200;
+        $count = 0;
+
+        // ブロックエディタのコンテンツをパース
+        $blocks = parse_blocks( $content );
+
+        foreach ( $blocks as $block ) {
+            $count += $this->check_long_paragraph_in_block( $block, $threshold );
+        }
+
+        return $count;
+    }
+
+    /**
+     * ブロック内の長文段落を再帰的にチェック
+     */
+    private function check_long_paragraph_in_block( $block, $threshold ) {
+        $count = 0;
+
+        if ( $block['blockName'] === 'core/paragraph' ) {
+            $inner_html = isset( $block['innerHTML'] ) ? $block['innerHTML'] : '';
+            $plain_text = wp_strip_all_tags( $inner_html );
+            $char_count = mb_strlen( $plain_text );
+
+            if ( $char_count >= $threshold ) {
+                $count++;
+            }
+        }
+
+        // 内部ブロックを再帰的にチェック
+        if ( ! empty( $block['innerBlocks'] ) ) {
+            foreach ( $block['innerBlocks'] as $inner_block ) {
+                $count += $this->check_long_paragraph_in_block( $inner_block, $threshold );
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * 投稿一覧にエラーカラムを追加
+     */
+    public function add_error_column( $columns ) {
+        $settings = $this->get_settings();
+        if ( ! $settings['post_list_error_column_enabled'] ) {
+            return $columns;
+        }
+
+        $new_columns = array();
+        foreach ( $columns as $key => $value ) {
+            $new_columns[ $key ] = $value;
+            if ( $key === 'title' ) {
+                $new_columns['ic_errors'] = 'エラー';
+            }
+        }
+        return $new_columns;
+    }
+
+    /**
+     * エラーカラムの内容を表示
+     */
+    public function render_error_column( $column, $post_id ) {
+        if ( $column !== 'ic_errors' ) {
+            return;
+        }
+
+        $errors = $this->get_post_errors( $post_id );
+        $total = array_sum( $errors );
+
+        if ( $total === 0 ) {
+            echo '<span style="color: #999;">—</span>';
+        } else {
+            echo '<span style="color: #dc2626; font-weight: 600;">' . esc_html( $total ) . '</span>';
+        }
+    }
+
+    /**
+     * エラーカラムをソート可能にする
+     */
+    public function add_error_sortable_column( $columns ) {
+        $settings = $this->get_settings();
+        if ( ! $settings['post_list_error_column_enabled'] ) {
+            return $columns;
+        }
+
+        $columns['ic_errors'] = 'ic_errors';
+        return $columns;
+    }
+
+    /**
+     * エラー数でソート
+     */
+    public function sort_by_error_count( $query ) {
+        if ( ! is_admin() || ! $query->is_main_query() ) {
+            return;
+        }
+
+        if ( $query->get( 'orderby' ) !== 'ic_errors' ) {
+            return;
+        }
+
+        $query->set( 'meta_key', '_ic_error_count' );
+        $query->set( 'orderby', 'meta_value_num' );
+    }
+
+    /**
+     * 投稿保存時にエラー数をメタデータに保存
+     */
+    public function update_error_count_meta( $post_id ) {
+        // 自動保存やリビジョンは無視
+        if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+            return;
+        }
+
+        // 投稿タイプが post のみ
+        $post = get_post( $post_id );
+        if ( ! $post || $post->post_type !== 'post' ) {
+            return;
+        }
+
+        $errors = $this->get_post_errors( $post_id );
+        $total = array_sum( $errors );
+
+        update_post_meta( $post_id, '_ic_error_count', $total );
+    }
+
+    /**
+     * エラー数の一括再計算を処理
+     */
+    public function handle_recalculate_errors() {
+        if ( ! isset( $_GET['ic_recalculate_errors'] ) || $_GET['ic_recalculate_errors'] !== '1' ) {
+            return;
+        }
+
+        if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'ic_recalculate_errors' ) ) {
+            return;
+        }
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $posts = get_posts( array(
+            'post_type'      => 'post',
+            'posts_per_page' => -1,
+            'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+            'fields'         => 'ids',
+        ) );
+
+        $count = 0;
+        foreach ( $posts as $post_id ) {
+            $errors = $this->get_post_errors( $post_id );
+            $total = array_sum( $errors );
+            update_post_meta( $post_id, '_ic_error_count', $total );
+            $count++;
+        }
+
+        // リダイレクト
+        wp_redirect( add_query_arg( array(
+            'page' => 'intelligent-checker-settings',
+            'ic_recalculated' => $count,
+        ), admin_url( 'options-general.php' ) ) );
+        exit;
     }
 }
 

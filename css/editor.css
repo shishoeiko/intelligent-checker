@@ -201,70 +201,102 @@
    Naked URL Alert Styles
    ======================================== */
 
-.ic-naked-url-notice {
-    background-color: #fff3cd;
-    border: 1px solid #ffc107;
-    border-left: 4px solid #ffc107;
-    border-radius: 4px;
-    margin: 16px auto;
-    padding: 12px 16px;
-    max-width: 650px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.ic-naked-url-header {
+.ic-naked-url-alert-banner {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    margin: 16px auto;
+    max-width: 650px;
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    border-left: 4px solid #06b6d4;
+    border-radius: 4px;
 }
 
-.ic-naked-url-icon {
-    font-size: 18px;
+.ic-naked-url-alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+}
+
+.ic-naked-url-alert-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #06b6d4;
+    border-radius: 50%;
+    color: white;
+}
+
+.ic-naked-url-alert-text {
+    flex: 1;
+}
+
+.ic-naked-url-alert-title {
+    margin: 0 0 2px 0;
+    font-size: 13px;
+    color: #0e7490;
     line-height: 1.4;
 }
 
-.ic-naked-url-message {
-    color: #856404;
-    font-size: 14px;
-    line-height: 1.5;
-    font-weight: 500;
+.ic-naked-url-alert-title strong {
+    color: #155e75;
 }
 
-.ic-naked-url-toggle {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 6px 12px;
-    background-color: #ffc107;
+.ic-naked-url-alert-desc {
+    margin: 0;
+    font-size: 12px;
+    color: #0891b2;
+    line-height: 1.6;
+}
+
+.ic-naked-url-alert-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #06b6d4;
+    color: white;
     border: none;
     border-radius: 4px;
-    color: #856404;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.ic-naked-url-toggle:hover {
-    background-color: #e0a800;
+.ic-naked-url-alert-button:hover {
+    background: #0891b2;
 }
 
-.ic-naked-url-toggle:focus {
-    outline: 2px solid #856404;
-    outline-offset: 2px;
+.ic-naked-url-count {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 3px;
+    font-size: 12px;
 }
 
 .ic-naked-url-list {
-    margin: 12px 0 0 0;
+    margin: 10px 0 0 0;
     padding: 0;
     list-style: none;
 }
 
 .ic-naked-url-item {
-    padding: 8px 12px;
+    padding: 8px 10px;
     margin-bottom: 6px;
-    background-color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(6, 182, 212, 0.3);
     border-radius: 4px;
-    border: 1px solid rgba(255, 193, 7, 0.5);
 }
 
 .ic-naked-url-item:last-child {
@@ -274,11 +306,25 @@
 .ic-naked-url-item code {
     font-family: Consolas, Monaco, 'Courier New', monospace;
     font-size: 12px;
-    color: #d63384;
-    background-color: rgba(255, 255, 255, 0.5);
+    color: #0e7490;
+    background: rgba(236, 254, 255, 0.8);
     padding: 2px 6px;
     border-radius: 3px;
     word-break: break-all;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+    .ic-naked-url-alert-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ic-naked-url-alert-button {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* ========================================

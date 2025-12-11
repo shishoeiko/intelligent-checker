@@ -321,13 +321,15 @@
             // 既存のアラートがある場合は内容だけ更新
             if (existingAlert) {
                 const list = existingAlert.querySelector('.ic-naked-url-list');
-                const toggleBtn = existingAlert.querySelector('.ic-naked-url-toggle');
+                const countBadge = existingAlert.querySelector('.ic-naked-url-count');
 
-                if (list && toggleBtn) {
+                if (list && countBadge) {
                     // リストの内容を更新
                     list.innerHTML = nakedUrls.map(item => `<li class="ic-naked-url-item"><code>${this.escapeHtml(item.anchorText)}</code></li>`).join('');
-                    // ボタンテキストを更新（開閉状態を維持）
-                    toggleBtn.textContent = `${l10n.nakedUrlDetail || '該当箇所'} (${nakedUrls.length}件) ${self.isListOpen ? '▲' : '▼'}`;
+                    // カウント表示を更新
+                    countBadge.textContent = `${nakedUrls.length}件`;
+                    // リスト表示状態を維持
+                    list.style.display = self.isListOpen ? 'block' : 'none';
                     return;
                 }
             }
@@ -339,30 +341,45 @@
 
             const alertContainer = document.createElement('div');
             alertContainer.id = 'ic-naked-url-alert';
-            alertContainer.className = 'ic-naked-url-notice';
+            alertContainer.className = 'ic-naked-url-alert-banner';
 
             alertContainer.innerHTML = `
-                <div class="ic-naked-url-header">
-                    <span class="ic-naked-url-icon">⚠️</span>
-                    <span class="ic-naked-url-message">${l10n.nakedUrlMessage || 'URLが直書きでリンクされている箇所があります。'}</span>
+                <div class="ic-naked-url-alert-content">
+                    <div class="ic-naked-url-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                    </div>
+                    <div class="ic-naked-url-alert-text">
+                        <p class="ic-naked-url-alert-title">
+                            <strong>${l10n.nakedUrlTitle || 'URLが直書きでリンクされている箇所があります'}</strong>
+                        </p>
+                        <p class="ic-naked-url-alert-desc">
+                            ${l10n.nakedUrlDesc || '意図せずURLになっていないかを確認してください'}
+                        </p>
+                        <ul class="ic-naked-url-list" style="display: ${self.isListOpen ? 'block' : 'none'};">
+                            ${nakedUrls.map(item => `<li class="ic-naked-url-item"><code>${this.escapeHtml(item.anchorText)}</code></li>`).join('')}
+                        </ul>
+                    </div>
                 </div>
-                <button class="ic-naked-url-toggle" type="button">
-                    ${l10n.nakedUrlDetail || '該当箇所'} (${nakedUrls.length}件) ${self.isListOpen ? '▲' : '▼'}
+                <button class="ic-naked-url-alert-button" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    ${l10n.nakedUrlDetail || '該当箇所'} <span class="ic-naked-url-count">${nakedUrls.length}件</span>
                 </button>
-                <ul class="ic-naked-url-list" style="display: ${self.isListOpen ? 'block' : 'none'};">
-                    ${nakedUrls.map(item => `<li class="ic-naked-url-item"><code>${this.escapeHtml(item.anchorText)}</code></li>`).join('')}
-                </ul>
             `;
 
             titleWrapper.parentNode.insertBefore(alertContainer, titleWrapper.nextSibling);
 
-            const toggleBtn = alertContainer.querySelector('.ic-naked-url-toggle');
+            const toggleBtn = alertContainer.querySelector('.ic-naked-url-alert-button');
             const list = alertContainer.querySelector('.ic-naked-url-list');
 
             toggleBtn.addEventListener('click', () => {
                 self.isListOpen = !self.isListOpen;
                 list.style.display = self.isListOpen ? 'block' : 'none';
-                toggleBtn.textContent = `${l10n.nakedUrlDetail || '該当箇所'} (${nakedUrls.length}件) ${self.isListOpen ? '▲' : '▼'}`;
             });
         }
     };
