@@ -810,6 +810,173 @@
     };
 
     // ========================================
+    // Heading Caution Keyword Checker Module
+    // ========================================
+    const HeadingCautionKeywordChecker = {
+        /**
+         * H2見出しから要注意キーワードを含むものを検出
+         */
+        findH2WithCautionKeywords: function() {
+            const keywords = config.cautionKeywords || [];
+            const blocks = select('core/block-editor').getBlocks();
+            const issues = [];
+
+            function checkBlocks(blocks) {
+                blocks.forEach(block => {
+                    if (block.name === 'core/heading') {
+                        const level = block.attributes.level || 2;
+                        // H2のみを対象とする
+                        if (level === 2) {
+                            const content = block.attributes.content || '';
+                            const plainText = content.replace(/<[^>]*>/g, '').trim();
+
+                            // 要注意キーワードをチェック
+                            const foundKeywords = [];
+                            keywords.forEach(keyword => {
+                                if (!keyword) return;
+                                if (plainText.includes(keyword)) {
+                                    foundKeywords.push(keyword);
+                                }
+                            });
+
+                            if (foundKeywords.length > 0) {
+                                issues.push({
+                                    clientId: block.clientId,
+                                    text: plainText,
+                                    keywords: foundKeywords
+                                });
+                            }
+                        }
+                    }
+
+                    if (block.innerBlocks && block.innerBlocks.length > 0) {
+                        checkBlocks(block.innerBlocks);
+                    }
+                });
+            }
+
+            checkBlocks(blocks);
+            return issues;
+        },
+
+        /**
+         * H2ブロックにハイライト表示
+         */
+        updateHighlights: function(issues) {
+            // 既存のハイライトを削除
+            document.querySelectorAll('.ic-heading-caution-highlight').forEach(el => {
+                el.classList.remove('ic-heading-caution-highlight');
+            });
+
+            // 該当ブロックにハイライトを追加
+            issues.forEach(issue => {
+                const blockElement = document.querySelector(`[data-block="${issue.clientId}"]`);
+                if (blockElement) {
+                    blockElement.classList.add('ic-heading-caution-highlight');
+                }
+            });
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-heading-caution-keyword-alert-banner').forEach(el => el.remove());
+
+            const issues = this.findH2WithCautionKeywords();
+
+            // ハイライトを更新
+            this.updateHighlights(issues);
+
+            // 問題がなければ何もしない
+            if (issues.length === 0) {
+                return;
+            }
+
+            // 見出しごとの表示を作成
+            const issuesList = issues.map(issue => {
+                const keywordsDisplay = issue.keywords.map(k => `「${k}」`).join('、');
+                return `<li class="ic-heading-caution-item" data-client-id="${issue.clientId}">
+                    <span class="ic-heading-caution-text">${issue.text}</span>
+                    <span class="ic-heading-caution-keywords">${keywordsDisplay}</span>
+                </li>`;
+            }).join('');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-heading-caution-keyword-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-heading-caution-keyword-alert-content">
+                    <div class="ic-heading-caution-keyword-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="ic-heading-caution-keyword-alert-text">
+                        <p class="ic-heading-caution-keyword-alert-title">
+                            <strong>${l10n.headingCautionKeywordTitle || 'H2見出しに要注意キーワードが含まれています'}</strong>
+                        </p>
+                        <p class="ic-heading-caution-keyword-alert-desc">
+                            ${l10n.headingCautionKeywordDesc || '以下の見出しに要注意キーワードが含まれています。問題がないか確認してください。'}
+                        </p>
+                        <ul class="ic-heading-caution-list">
+                            ${issuesList}
+                        </ul>
+                    </div>
+                </div>
+                <button class="ic-heading-caution-keyword-alert-button" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    ${l10n.headingCautionKeywordCheck || '見出しを確認'}
+                </button>
+            `;
+
+            // ボタンクリックで最初の問題のある見出しにスクロール
+            banner.querySelector('.ic-heading-caution-keyword-alert-button').addEventListener('click', function() {
+                if (issues.length > 0) {
+                    const firstIssue = issues[0];
+                    dispatch('core/block-editor').selectBlock(firstIssue.clientId);
+
+                    const blockElement = document.querySelector(`[data-block="${firstIssue.clientId}"]`);
+                    if (blockElement) {
+                        blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+
+            // リスト項目クリックで該当見出しにスクロール
+            banner.querySelectorAll('.ic-heading-caution-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-client-id');
+                    if (clientId) {
+                        dispatch('core/block-editor').selectBlock(clientId);
+
+                        const blockElement = document.querySelector(`[data-block="${clientId}"]`);
+                        if (blockElement) {
+                            blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                });
+            });
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Featured Image Checker Module
     // ========================================
     const FeaturedImageChecker = {
@@ -1351,6 +1518,11 @@
                 if (config.cautionKeywordEnabled) {
                     const currentTitle = select('core/editor').getEditedPostAttribute('title') || '';
                     CautionKeywordChecker.updateAlertBanner(currentTitle);
+                }
+
+                // Heading Caution Keyword Checker (H2見出しの要注意キーワードチェック)
+                if (config.cautionKeywordEnabled) {
+                    HeadingCautionKeywordChecker.updateAlertBanner();
                 }
             };
 

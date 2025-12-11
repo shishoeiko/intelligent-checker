@@ -1141,3 +1141,151 @@ input.ic-slug-invalid:focus {
         gap: 12px;
     }
 }
+
+/* ========================================
+   Heading Caution Keyword Checker Styles
+   ======================================== */
+
+/* H2見出しのハイライト */
+.ic-heading-caution-highlight {
+    outline: 3px solid #f59e0b !important;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* H2見出し要注意キーワードアラートバナー */
+.ic-heading-caution-keyword-alert-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    margin: 16px auto;
+    max-width: 650px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-left: 4px solid #f59e0b;
+    border-radius: 4px;
+}
+
+.ic-heading-caution-keyword-alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+}
+
+.ic-heading-caution-keyword-alert-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #f59e0b;
+    border-radius: 50%;
+    color: white;
+}
+
+.ic-heading-caution-keyword-alert-text {
+    flex: 1;
+}
+
+.ic-heading-caution-keyword-alert-title {
+    margin: 0 0 2px 0;
+    font-size: 13px;
+    color: #b45309;
+    line-height: 1.4;
+}
+
+.ic-heading-caution-keyword-alert-title strong {
+    color: #92400e;
+}
+
+.ic-heading-caution-keyword-alert-desc {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #d97706;
+    line-height: 1.6;
+}
+
+/* 見出しリスト */
+.ic-heading-caution-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ic-heading-caution-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ic-heading-caution-item:last-child {
+    margin-bottom: 0;
+}
+
+.ic-heading-caution-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: #f59e0b;
+}
+
+.ic-heading-caution-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #92400e;
+    line-height: 1.4;
+}
+
+.ic-heading-caution-keywords {
+    font-size: 11px;
+    color: #d97706;
+    background: #fef3c7;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.ic-heading-caution-keyword-alert-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f59e0b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ic-heading-caution-keyword-alert-button:hover {
+    background: #d97706;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+    .ic-heading-caution-keyword-alert-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ic-heading-caution-keyword-alert-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
