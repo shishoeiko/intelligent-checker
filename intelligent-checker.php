@@ -3,7 +3,7 @@
  * Plugin Name: Intelligent Checker
  * Plugin URI: https://example.com/intelligent-checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Your Name
  * Author URI: https://example.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.0.2';
+    const VERSION = '1.0.3';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
