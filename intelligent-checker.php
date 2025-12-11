@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.7.1
+ * Version: 1.7.2
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.7.1';
+    const VERSION = '1.7.2';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -1544,9 +1544,15 @@ class Intelligent_Checker {
      */
     private function check_alt_in_block( $block ) {
         $count = 0;
+        $inner_html = isset( $block['innerHTML'] ) ? $block['innerHTML'] : '';
 
         if ( $block['blockName'] === 'core/image' ) {
-            if ( empty( $block['attrs']['alt'] ) ) {
+            // まずブロック属性をチェック
+            if ( ! empty( $block['attrs']['alt'] ) ) {
+                // 属性にALTがあればOK
+            } elseif ( $this->has_alt_in_html( $inner_html ) ) {
+                // HTMLにALTがあればOK
+            } else {
                 $count++;
             }
         } elseif ( $block['blockName'] === 'core/gallery' ) {
@@ -1558,12 +1564,24 @@ class Intelligent_Checker {
                 }
             }
         } elseif ( $block['blockName'] === 'core/cover' ) {
-            if ( ! empty( $block['attrs']['url'] ) && empty( $block['attrs']['alt'] ) ) {
-                $count++;
+            if ( ! empty( $block['attrs']['url'] ) ) {
+                if ( ! empty( $block['attrs']['alt'] ) ) {
+                    // 属性にALTがあればOK
+                } elseif ( $this->has_alt_in_html( $inner_html ) ) {
+                    // HTMLにALTがあればOK
+                } else {
+                    $count++;
+                }
             }
         } elseif ( $block['blockName'] === 'core/media-text' ) {
-            if ( ! empty( $block['attrs']['mediaUrl'] ) && empty( $block['attrs']['mediaAlt'] ) ) {
-                $count++;
+            if ( ! empty( $block['attrs']['mediaUrl'] ) ) {
+                if ( ! empty( $block['attrs']['mediaAlt'] ) ) {
+                    // 属性にALTがあればOK
+                } elseif ( $this->has_alt_in_html( $inner_html ) ) {
+                    // HTMLにALTがあればOK
+                } else {
+                    $count++;
+                }
             }
         }
 
@@ -1575,6 +1593,22 @@ class Intelligent_Checker {
         }
 
         return $count;
+    }
+
+    /**
+     * HTML内にALT属性が設定されているかチェック
+     */
+    private function has_alt_in_html( $html ) {
+        if ( empty( $html ) ) {
+            return false;
+        }
+
+        // imgタグのalt属性を検出（空でない値があるかチェック）
+        if ( preg_match( '/<img[^>]+alt\s*=\s*["\']([^"\']+)["\'][^>]*>/i', $html, $matches ) ) {
+            return ! empty( trim( $matches[1] ) );
+        }
+
+        return false;
     }
 
     /**
