@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.2.0
+ * Version: 1.3.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.2.0';
+    const VERSION = '1.3.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -99,6 +99,9 @@ class Intelligent_Checker {
             'heading_structure_enabled' => true,
             // スラッグチェック設定
             'slug_checker_enabled' => true,
+            // 重複キーワードチェック設定
+            'duplicate_keyword_enabled' => true,
+            'duplicate_keywords' => "詐欺\n口コミ\n評判\n返金\n弁護士\n手口",
         );
     }
 
@@ -180,6 +183,10 @@ class Intelligent_Checker {
 
         // スラッグチェック設定
         $sanitized['slug_checker_enabled'] = ! empty( $input['slug_checker_enabled'] );
+
+        // 重複キーワードチェック設定
+        $sanitized['duplicate_keyword_enabled'] = ! empty( $input['duplicate_keyword_enabled'] );
+        $sanitized['duplicate_keywords'] = isset( $input['duplicate_keywords'] ) ? sanitize_textarea_field( $input['duplicate_keywords'] ) : '';
 
         return $sanitized;
     }
@@ -336,6 +343,17 @@ class Intelligent_Checker {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>重複キーワードチェッカー</strong>
+                                <span>タイトル内で同じキーワードが複数回使用されている場合にアラートを表示します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[duplicate_keyword_enabled]" value="1" <?php checked( $settings['duplicate_keyword_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -374,6 +392,13 @@ class Intelligent_Checker {
                         <h2>タイトルチェック: セルフチェックリスト</h2>
                         <textarea name="intelligent_checker_settings[checklist]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['checklist'] ); ?></textarea>
                         <p class="description">1行に1つずつチェック項目を入力してください。ライターが手動でチェックする項目です。</p>
+                    </div>
+
+                    <!-- 重複チェック: 対象キーワード -->
+                    <div class="form-section">
+                        <h2>重複チェック: 対象キーワード</h2>
+                        <textarea name="intelligent_checker_settings[duplicate_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['duplicate_keywords'] ); ?></textarea>
+                        <p class="description">1行に1つずつキーワードを入力してください。タイトル内でこれらのキーワードが2回以上使用されている場合にアラートを表示します。</p>
                     </div>
 
                     <!-- 長文段落チェック: 閾値設定 -->
@@ -451,6 +476,8 @@ class Intelligent_Checker {
             'longParagraphEnabled'        => (bool) $settings['long_paragraph_enabled'],
             'headingStructureEnabled'     => (bool) $settings['heading_structure_enabled'],
             'slugCheckerEnabled'          => (bool) $settings['slug_checker_enabled'],
+            'duplicateKeywordEnabled'     => (bool) $settings['duplicate_keyword_enabled'],
+            'duplicateKeywords'           => $this->text_to_array( $settings['duplicate_keywords'] ),
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -495,6 +522,10 @@ class Intelligent_Checker {
                 'slugInvalidChars'     => __( '無効な文字', 'intelligent-checker' ),
                 'slugNumbersOnlyTitle' => __( 'スラッグが数字のみになっています', 'intelligent-checker' ),
                 'slugNumbersOnlyDesc'  => __( 'スラッグには英字を含めてください', 'intelligent-checker' ),
+                // Duplicate Keyword Checker
+                'duplicateKeywordTitle' => __( 'タイトルに同じキーワードが複数回使用されています', 'intelligent-checker' ),
+                'duplicateKeywordDesc'  => __( '同じキーワードを複数回使用するのは冗長です。1つに減らすことを検討してください。', 'intelligent-checker' ),
+                'duplicateKeywordList'  => __( '重複キーワード', 'intelligent-checker' ),
             ),
         ) );
     }

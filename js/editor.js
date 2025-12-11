@@ -661,6 +661,87 @@
     };
 
     // ========================================
+    // Duplicate Keyword Checker Module
+    // ========================================
+    const DuplicateKeywordChecker = {
+        /**
+         * タイトル内で重複しているキーワードを検出
+         */
+        findDuplicateKeywords: function(title) {
+            const keywords = config.duplicateKeywords || [];
+            const duplicates = [];
+
+            keywords.forEach(keyword => {
+                if (!keyword) return;
+
+                // キーワードの出現回数をカウント
+                const regex = new RegExp(keyword, 'gi');
+                const matches = title.match(regex);
+                const count = matches ? matches.length : 0;
+
+                if (count >= 2) {
+                    duplicates.push({
+                        keyword: keyword,
+                        count: count
+                    });
+                }
+            });
+
+            return duplicates;
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function(title) {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-duplicate-keyword-alert-banner').forEach(el => el.remove());
+
+            const duplicates = this.findDuplicateKeywords(title);
+
+            // 重複がなければ何もしない
+            if (duplicates.length === 0) {
+                return;
+            }
+
+            const duplicateDisplay = duplicates.map(d => `「${d.keyword}」(${d.count}回)`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-duplicate-keyword-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-duplicate-keyword-alert-content">
+                    <div class="ic-duplicate-keyword-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="ic-duplicate-keyword-alert-text">
+                        <p class="ic-duplicate-keyword-alert-title">
+                            <strong>${l10n.duplicateKeywordTitle || 'タイトルに同じキーワードが複数回使用されています'}</strong>
+                        </p>
+                        <p class="ic-duplicate-keyword-alert-desc">
+                            ${l10n.duplicateKeywordDesc || '同じキーワードを複数回使用するのは冗長です。1つに減らすことを検討してください。'}
+                            <br>
+                            <span class="ic-duplicate-keyword-list">${l10n.duplicateKeywordList || '重複キーワード'}: ${duplicateDisplay}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Slug Checker Module
     // ========================================
     const SlugChecker = {
@@ -1039,6 +1120,12 @@
                     }
 
                     SlugChecker.updateAlertBanner(slugToCheck);
+                }
+
+                // Duplicate Keyword Checker
+                if (config.duplicateKeywordEnabled) {
+                    const currentTitle = select('core/editor').getEditedPostAttribute('title') || '';
+                    DuplicateKeywordChecker.updateAlertBanner(currentTitle);
                 }
             };
 
