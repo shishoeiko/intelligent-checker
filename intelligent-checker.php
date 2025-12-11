@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.6.0
+ * Version: 1.6.1
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.6.0';
+    const VERSION = '1.6.1';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -94,7 +94,7 @@ class Intelligent_Checker {
             // 長文段落チェック設定
             'long_paragraph_enabled'   => true,
             'long_paragraph_threshold' => 200,
-            'long_paragraph_exclude_classes' => '',
+            'long_paragraph_exclude_classes' => 'swell-block-accordion__body',
             // 見出し構造チェック設定
             'heading_structure_enabled' => true,
             // スラッグチェック設定
