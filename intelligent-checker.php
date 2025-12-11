@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.7.3
+ * Version: 1.8.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.7.3';
+    const VERSION = '1.8.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -112,12 +112,16 @@ class Intelligent_Checker {
             'duplicate_keywords' => "詐欺\n口コミ\n評判\n返金\n弁護士\n手口",
             // アイキャッチ画像チェック設定
             'featured_image_checker_enabled' => true,
-            // 禁止キーワードチェック設定
+            // 禁止キーワードチェック設定（タイトル用）
             'forbidden_keyword_enabled' => true,
             'forbidden_keywords' => "|\n｜",
-            // 要注意キーワードチェック設定
+            // 禁止キーワードチェック設定（H2見出し用）
+            'forbidden_keywords_heading' => "",
+            // 要注意キーワードチェック設定（タイトル用）
             'caution_keyword_enabled' => true,
             'caution_keywords' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
+            // 要注意キーワードチェック設定（H2見出し用）
+            'caution_keywords_heading' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
             // 投稿一覧エラー表示設定
             'post_list_error_column_enabled' => true,
             'post_list_show_forbidden_keyword_title' => true,
@@ -218,13 +222,19 @@ class Intelligent_Checker {
         // アイキャッチ画像チェック設定
         $sanitized['featured_image_checker_enabled'] = ! empty( $input['featured_image_checker_enabled'] );
 
-        // 禁止キーワードチェック設定
+        // 禁止キーワードチェック設定（タイトル用）
         $sanitized['forbidden_keyword_enabled'] = ! empty( $input['forbidden_keyword_enabled'] );
         $sanitized['forbidden_keywords'] = isset( $input['forbidden_keywords'] ) ? sanitize_textarea_field( $input['forbidden_keywords'] ) : '';
 
-        // 要注意キーワードチェック設定
+        // 禁止キーワードチェック設定（H2見出し用）
+        $sanitized['forbidden_keywords_heading'] = isset( $input['forbidden_keywords_heading'] ) ? sanitize_textarea_field( $input['forbidden_keywords_heading'] ) : '';
+
+        // 要注意キーワードチェック設定（タイトル用）
         $sanitized['caution_keyword_enabled'] = ! empty( $input['caution_keyword_enabled'] );
         $sanitized['caution_keywords'] = isset( $input['caution_keywords'] ) ? sanitize_textarea_field( $input['caution_keywords'] ) : '';
+
+        // 要注意キーワードチェック設定（H2見出し用）
+        $sanitized['caution_keywords_heading'] = isset( $input['caution_keywords_heading'] ) ? sanitize_textarea_field( $input['caution_keywords_heading'] ) : '';
 
         // 投稿一覧エラー表示設定
         $sanitized['post_list_error_column_enabled'] = ! empty( $input['post_list_error_column_enabled'] );
@@ -484,18 +494,32 @@ class Intelligent_Checker {
                         <p class="description">1行に1つずつキーワードを入力してください。タイトル内でこれらのキーワードが2回以上使用されている場合にアラートを表示します。</p>
                     </div>
 
-                    <!-- 禁止キーワード -->
+                    <!-- 禁止キーワード（タイトル） -->
                     <div class="form-section">
-                        <h2>禁止キーワード</h2>
+                        <h2>禁止キーワード（タイトル）</h2>
                         <textarea name="intelligent_checker_settings[forbidden_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['forbidden_keywords'] ); ?></textarea>
                         <p class="description">1行に1つずつキーワードを入力してください。タイトルにこれらのキーワードが含まれている場合に赤色のアラートを表示します。</p>
                     </div>
 
-                    <!-- 要注意キーワード -->
+                    <!-- 禁止キーワード（H2見出し） -->
                     <div class="form-section">
-                        <h2>要注意キーワード</h2>
+                        <h2>禁止キーワード（H2見出し）</h2>
+                        <textarea name="intelligent_checker_settings[forbidden_keywords_heading]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['forbidden_keywords_heading'] ); ?></textarea>
+                        <p class="description">1行に1つずつキーワードを入力してください。H2見出しにこれらのキーワードが含まれている場合に赤色のアラートを表示します。空の場合はチェックされません。</p>
+                    </div>
+
+                    <!-- 要注意キーワード（タイトル） -->
+                    <div class="form-section">
+                        <h2>要注意キーワード（タイトル）</h2>
                         <textarea name="intelligent_checker_settings[caution_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['caution_keywords'] ); ?></textarea>
                         <p class="description">1行に1つずつキーワードを入力してください。タイトルにこれらのキーワードが含まれている場合に黄色のアラートを表示します。</p>
+                    </div>
+
+                    <!-- 要注意キーワード（H2見出し） -->
+                    <div class="form-section">
+                        <h2>要注意キーワード（H2見出し）</h2>
+                        <textarea name="intelligent_checker_settings[caution_keywords_heading]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['caution_keywords_heading'] ); ?></textarea>
+                        <p class="description">1行に1つずつキーワードを入力してください。H2見出しにこれらのキーワードが含まれている場合に黄色のアラートを表示します。空の場合はチェックされません。</p>
                     </div>
 
                     <!-- 長文段落チェック: 閾値設定 -->
@@ -629,10 +653,12 @@ class Intelligent_Checker {
             'duplicateKeywordEnabled'     => (bool) $settings['duplicate_keyword_enabled'],
             'duplicateKeywords'           => $this->text_to_array( $settings['duplicate_keywords'] ),
             'featuredImageCheckerEnabled' => (bool) $settings['featured_image_checker_enabled'],
-            'forbiddenKeywordEnabled'     => (bool) $settings['forbidden_keyword_enabled'],
-            'forbiddenKeywords'           => $this->text_to_array( $settings['forbidden_keywords'] ),
-            'cautionKeywordEnabled'       => (bool) $settings['caution_keyword_enabled'],
-            'cautionKeywords'             => $this->text_to_array( $settings['caution_keywords'] ),
+            'forbiddenKeywordEnabled'        => (bool) $settings['forbidden_keyword_enabled'],
+            'forbiddenKeywords'              => $this->text_to_array( $settings['forbidden_keywords'] ),
+            'forbiddenKeywordsHeading'       => $this->text_to_array( $settings['forbidden_keywords_heading'] ),
+            'cautionKeywordEnabled'          => (bool) $settings['caution_keyword_enabled'],
+            'cautionKeywords'                => $this->text_to_array( $settings['caution_keywords'] ),
+            'cautionKeywordsHeading'         => $this->text_to_array( $settings['caution_keywords_heading'] ),
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -693,6 +719,10 @@ class Intelligent_Checker {
                 'cautionKeywordTitle' => __( 'タイトルに要注意キーワードが含まれています', 'intelligent-checker' ),
                 'cautionKeywordDesc'  => __( '以下のキーワードが含まれています。問題がないか確認してください。', 'intelligent-checker' ),
                 'cautionKeywordList'  => __( '要注意キーワード', 'intelligent-checker' ),
+                // Heading Forbidden Keyword Checker
+                'headingForbiddenKeywordTitle' => __( 'H2見出しに禁止キーワードが含まれています', 'intelligent-checker' ),
+                'headingForbiddenKeywordDesc'  => __( '以下の見出しに禁止キーワードが含まれています。別の表現に変更してください。', 'intelligent-checker' ),
+                'headingForbiddenKeywordCheck' => __( '見出しを確認', 'intelligent-checker' ),
                 // Heading Caution Keyword Checker
                 'headingCautionKeywordTitle' => __( 'H2見出しに要注意キーワードが含まれています', 'intelligent-checker' ),
                 'headingCautionKeywordDesc'  => __( '以下の見出しに要注意キーワードが含まれています。問題がないか確認してください。', 'intelligent-checker' ),
@@ -1432,7 +1462,7 @@ class Intelligent_Checker {
      */
     private function check_caution_keywords_in_headings( $content ) {
         $settings = $this->get_settings();
-        $keywords = $this->text_to_array( $settings['caution_keywords'] );
+        $keywords = $this->text_to_array( $settings['caution_keywords_heading'] );
         $count = 0;
 
         // H2見出しを抽出（ブロックとクラシック両対応）
@@ -1459,7 +1489,7 @@ class Intelligent_Checker {
      */
     private function check_forbidden_keywords_in_headings( $content ) {
         $settings = $this->get_settings();
-        $keywords = $this->text_to_array( $settings['forbidden_keywords'] );
+        $keywords = $this->text_to_array( $settings['forbidden_keywords_heading'] );
         $count = 0;
 
         // H2見出しを抽出（ブロックとクラシック両対応）
