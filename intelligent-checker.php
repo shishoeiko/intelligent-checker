@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.4.0
+ * Version: 1.5.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.4.0';
+    const VERSION = '1.5.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -104,6 +104,12 @@ class Intelligent_Checker {
             'duplicate_keywords' => "詐欺\n口コミ\n評判\n返金\n弁護士\n手口",
             // アイキャッチ画像チェック設定
             'featured_image_checker_enabled' => true,
+            // 禁止キーワードチェック設定
+            'forbidden_keyword_enabled' => true,
+            'forbidden_keywords' => '',
+            // 要注意キーワードチェック設定
+            'caution_keyword_enabled' => true,
+            'caution_keywords' => '',
         );
     }
 
@@ -192,6 +198,14 @@ class Intelligent_Checker {
 
         // アイキャッチ画像チェック設定
         $sanitized['featured_image_checker_enabled'] = ! empty( $input['featured_image_checker_enabled'] );
+
+        // 禁止キーワードチェック設定
+        $sanitized['forbidden_keyword_enabled'] = ! empty( $input['forbidden_keyword_enabled'] );
+        $sanitized['forbidden_keywords'] = isset( $input['forbidden_keywords'] ) ? sanitize_textarea_field( $input['forbidden_keywords'] ) : '';
+
+        // 要注意キーワードチェック設定
+        $sanitized['caution_keyword_enabled'] = ! empty( $input['caution_keyword_enabled'] );
+        $sanitized['caution_keywords'] = isset( $input['caution_keywords'] ) ? sanitize_textarea_field( $input['caution_keywords'] ) : '';
 
         return $sanitized;
     }
@@ -370,6 +384,28 @@ class Intelligent_Checker {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>禁止キーワードチェッカー</strong>
+                                <span>タイトルに使用してはいけないキーワードが含まれている場合にアラートを表示します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[forbidden_keyword_enabled]" value="1" <?php checked( $settings['forbidden_keyword_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>要注意キーワードチェッカー</strong>
+                                <span>タイトルに要注意キーワードが含まれている場合にアラートを表示します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[caution_keyword_enabled]" value="1" <?php checked( $settings['caution_keyword_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -415,6 +451,20 @@ class Intelligent_Checker {
                         <h2>重複チェック: 対象キーワード</h2>
                         <textarea name="intelligent_checker_settings[duplicate_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['duplicate_keywords'] ); ?></textarea>
                         <p class="description">1行に1つずつキーワードを入力してください。タイトル内でこれらのキーワードが2回以上使用されている場合にアラートを表示します。</p>
+                    </div>
+
+                    <!-- 禁止キーワード -->
+                    <div class="form-section">
+                        <h2>禁止キーワード</h2>
+                        <textarea name="intelligent_checker_settings[forbidden_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['forbidden_keywords'] ); ?></textarea>
+                        <p class="description">1行に1つずつキーワードを入力してください。タイトルにこれらのキーワードが含まれている場合に赤色のアラートを表示します。</p>
+                    </div>
+
+                    <!-- 要注意キーワード -->
+                    <div class="form-section">
+                        <h2>要注意キーワード</h2>
+                        <textarea name="intelligent_checker_settings[caution_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['caution_keywords'] ); ?></textarea>
+                        <p class="description">1行に1つずつキーワードを入力してください。タイトルにこれらのキーワードが含まれている場合に黄色のアラートを表示します。</p>
                     </div>
 
                     <!-- 長文段落チェック: 閾値設定 -->
@@ -495,6 +545,10 @@ class Intelligent_Checker {
             'duplicateKeywordEnabled'     => (bool) $settings['duplicate_keyword_enabled'],
             'duplicateKeywords'           => $this->text_to_array( $settings['duplicate_keywords'] ),
             'featuredImageCheckerEnabled' => (bool) $settings['featured_image_checker_enabled'],
+            'forbiddenKeywordEnabled'     => (bool) $settings['forbidden_keyword_enabled'],
+            'forbiddenKeywords'           => $this->text_to_array( $settings['forbidden_keywords'] ),
+            'cautionKeywordEnabled'       => (bool) $settings['caution_keyword_enabled'],
+            'cautionKeywords'             => $this->text_to_array( $settings['caution_keywords'] ),
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -546,6 +600,14 @@ class Intelligent_Checker {
                 // Featured Image Checker
                 'featuredImageTitle'    => __( 'アイキャッチ画像が設定されていません', 'intelligent-checker' ),
                 'featuredImageDesc'     => __( '記事の見栄えを良くするため、アイキャッチ画像を設定してください', 'intelligent-checker' ),
+                // Forbidden Keyword Checker
+                'forbiddenKeywordTitle' => __( 'タイトルに使用できないキーワードが含まれています', 'intelligent-checker' ),
+                'forbiddenKeywordDesc'  => __( '以下のキーワードはタイトルに使用できません。別の表現に変更してください。', 'intelligent-checker' ),
+                'forbiddenKeywordList'  => __( '禁止キーワード', 'intelligent-checker' ),
+                // Caution Keyword Checker
+                'cautionKeywordTitle' => __( 'タイトルに要注意キーワードが含まれています', 'intelligent-checker' ),
+                'cautionKeywordDesc'  => __( '以下のキーワードが含まれています。問題がないか確認してください。', 'intelligent-checker' ),
+                'cautionKeywordList'  => __( '要注意キーワード', 'intelligent-checker' ),
             ),
         ) );
     }

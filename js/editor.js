@@ -661,6 +661,155 @@
     };
 
     // ========================================
+    // Forbidden Keyword Checker Module
+    // ========================================
+    const ForbiddenKeywordChecker = {
+        /**
+         * タイトル内に含まれる禁止キーワードを検出
+         */
+        findForbiddenKeywords: function(title) {
+            const keywords = config.forbiddenKeywords || [];
+            const found = [];
+
+            keywords.forEach(keyword => {
+                if (!keyword) return;
+
+                // キーワードが含まれているかチェック
+                if (title.includes(keyword)) {
+                    found.push(keyword);
+                }
+            });
+
+            return found;
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function(title) {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-forbidden-keyword-alert-banner').forEach(el => el.remove());
+
+            const foundKeywords = this.findForbiddenKeywords(title);
+
+            // 禁止キーワードがなければ何もしない
+            if (foundKeywords.length === 0) {
+                return;
+            }
+
+            const keywordsDisplay = foundKeywords.map(k => `「${k}」`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-forbidden-keyword-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-forbidden-keyword-alert-content">
+                    <div class="ic-forbidden-keyword-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                        </svg>
+                    </div>
+                    <div class="ic-forbidden-keyword-alert-text">
+                        <p class="ic-forbidden-keyword-alert-title">
+                            <strong>${l10n.forbiddenKeywordTitle || 'タイトルに使用できないキーワードが含まれています'}</strong>
+                        </p>
+                        <p class="ic-forbidden-keyword-alert-desc">
+                            ${l10n.forbiddenKeywordDesc || '以下のキーワードはタイトルに使用できません。別の表現に変更してください。'}
+                            <br>
+                            <span class="ic-forbidden-keyword-list">${l10n.forbiddenKeywordList || '禁止キーワード'}: ${keywordsDisplay}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
+    // Caution Keyword Checker Module
+    // ========================================
+    const CautionKeywordChecker = {
+        /**
+         * タイトル内に含まれる要注意キーワードを検出
+         */
+        findCautionKeywords: function(title) {
+            const keywords = config.cautionKeywords || [];
+            const found = [];
+
+            keywords.forEach(keyword => {
+                if (!keyword) return;
+
+                // キーワードが含まれているかチェック
+                if (title.includes(keyword)) {
+                    found.push(keyword);
+                }
+            });
+
+            return found;
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function(title) {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-caution-keyword-alert-banner').forEach(el => el.remove());
+
+            const foundKeywords = this.findCautionKeywords(title);
+
+            // 要注意キーワードがなければ何もしない
+            if (foundKeywords.length === 0) {
+                return;
+            }
+
+            const keywordsDisplay = foundKeywords.map(k => `「${k}」`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-caution-keyword-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-caution-keyword-alert-content">
+                    <div class="ic-caution-keyword-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="ic-caution-keyword-alert-text">
+                        <p class="ic-caution-keyword-alert-title">
+                            <strong>${l10n.cautionKeywordTitle || 'タイトルに要注意キーワードが含まれています'}</strong>
+                        </p>
+                        <p class="ic-caution-keyword-alert-desc">
+                            ${l10n.cautionKeywordDesc || '以下のキーワードが含まれています。問題がないか確認してください。'}
+                            <br>
+                            <span class="ic-caution-keyword-list">${l10n.cautionKeywordList || '要注意キーワード'}: ${keywordsDisplay}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Featured Image Checker Module
     // ========================================
     const FeaturedImageChecker = {
@@ -1190,6 +1339,18 @@
                 // Featured Image Checker
                 if (config.featuredImageCheckerEnabled) {
                     FeaturedImageChecker.updateAlertBanner();
+                }
+
+                // Forbidden Keyword Checker
+                if (config.forbiddenKeywordEnabled) {
+                    const currentTitle = select('core/editor').getEditedPostAttribute('title') || '';
+                    ForbiddenKeywordChecker.updateAlertBanner(currentTitle);
+                }
+
+                // Caution Keyword Checker
+                if (config.cautionKeywordEnabled) {
+                    const currentTitle = select('core/editor').getEditedPostAttribute('title') || '';
+                    CautionKeywordChecker.updateAlertBanner(currentTitle);
                 }
             };
 
