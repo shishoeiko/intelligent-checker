@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.8.0
+ * Version: 1.8.1
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.8.0';
+    const VERSION = '1.8.1';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -1647,13 +1647,14 @@ class Intelligent_Checker {
     private function check_long_paragraphs_in_content( $content ) {
         $settings = $this->get_settings();
         $threshold = isset( $settings['long_paragraph_threshold'] ) ? absint( $settings['long_paragraph_threshold'] ) : 200;
+        $exclude_classes = $this->text_to_array( $settings['long_paragraph_exclude_classes'] );
         $count = 0;
 
         // ブロックエディタのコンテンツをパース
         $blocks = parse_blocks( $content );
 
         foreach ( $blocks as $block ) {
-            $count += $this->check_long_paragraph_in_block( $block, $threshold );
+            $count += $this->check_long_paragraph_in_block( $block, $threshold, $exclude_classes, false );
         }
 
         return $count;
@@ -1662,10 +1663,23 @@ class Intelligent_Checker {
     /**
      * ブロック内の長文段落を再帰的にチェック
      */
-    private function check_long_paragraph_in_block( $block, $threshold ) {
+    private function check_long_paragraph_in_block( $block, $threshold, $exclude_classes = array(), $is_excluded = false ) {
         $count = 0;
 
-        if ( $block['blockName'] === 'core/paragraph' ) {
+        // このブロックが除外クラスを持っているかチェック
+        $block_is_excluded = $is_excluded;
+        if ( ! $block_is_excluded && ! empty( $exclude_classes ) ) {
+            $block_class = isset( $block['attrs']['className'] ) ? $block['attrs']['className'] : '';
+            foreach ( $exclude_classes as $exclude_class ) {
+                if ( ! empty( $exclude_class ) && strpos( $block_class, $exclude_class ) !== false ) {
+                    $block_is_excluded = true;
+                    break;
+                }
+            }
+        }
+
+        // 除外されていない段落ブロックのみチェック
+        if ( ! $block_is_excluded && $block['blockName'] === 'core/paragraph' ) {
             $inner_html = isset( $block['innerHTML'] ) ? $block['innerHTML'] : '';
             $plain_text = wp_strip_all_tags( $inner_html );
             $char_count = mb_strlen( $plain_text );
@@ -1675,10 +1689,10 @@ class Intelligent_Checker {
             }
         }
 
-        // 内部ブロックを再帰的にチェック
+        // 内部ブロックを再帰的にチェック（除外状態を引き継ぐ）
         if ( ! empty( $block['innerBlocks'] ) ) {
             foreach ( $block['innerBlocks'] as $inner_block ) {
-                $count += $this->check_long_paragraph_in_block( $inner_block, $threshold );
+                $count += $this->check_long_paragraph_in_block( $inner_block, $threshold, $exclude_classes, $block_is_excluded );
             }
         }
 
