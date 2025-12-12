@@ -83,7 +83,17 @@ class IC_GitHub_Updater {
         ) );
 
         // エラーチェック
-        if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+        if ( is_wp_error( $response ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'IC_GitHub_Updater: wp_remote_get error - ' . $response->get_error_message() );
+            }
+            return false;
+        }
+
+        if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'IC_GitHub_Updater: HTTP error - ' . wp_remote_retrieve_response_code( $response ) );
+            }
             return false;
         }
 
