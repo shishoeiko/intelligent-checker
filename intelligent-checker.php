@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.9.0
+ * Version: 1.10.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.9.0';
+    const VERSION = '1.10.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -125,6 +125,8 @@ class Intelligent_Checker {
             // 禁止文字・文言チェック設定（投稿全体）
             'banned_patterns_enabled' => true,
             'banned_patterns' => "**",
+            // H2直下H3チェック設定
+            'h2_h3_direct_enabled' => true,
             // 投稿一覧エラー表示設定
             'post_list_error_column_enabled' => true,
             'post_list_show_forbidden_keyword_title' => true,
@@ -137,6 +139,7 @@ class Intelligent_Checker {
             'post_list_show_alt_missing' => true,
             'post_list_show_long_paragraph' => true,
             'post_list_show_banned_patterns' => true,
+            'post_list_show_h2_h3_direct' => true,
         );
     }
 
@@ -244,6 +247,9 @@ class Intelligent_Checker {
         $sanitized['banned_patterns_enabled'] = ! empty( $input['banned_patterns_enabled'] );
         $sanitized['banned_patterns'] = isset( $input['banned_patterns'] ) ? sanitize_textarea_field( $input['banned_patterns'] ) : '';
 
+        // H2直下H3チェック設定
+        $sanitized['h2_h3_direct_enabled'] = ! empty( $input['h2_h3_direct_enabled'] );
+
         // 投稿一覧エラー表示設定
         $sanitized['post_list_error_column_enabled'] = ! empty( $input['post_list_error_column_enabled'] );
         $sanitized['post_list_show_forbidden_keyword_title'] = ! empty( $input['post_list_show_forbidden_keyword_title'] );
@@ -256,6 +262,7 @@ class Intelligent_Checker {
         $sanitized['post_list_show_alt_missing'] = ! empty( $input['post_list_show_alt_missing'] );
         $sanitized['post_list_show_long_paragraph'] = ! empty( $input['post_list_show_long_paragraph'] );
         $sanitized['post_list_show_banned_patterns'] = ! empty( $input['post_list_show_banned_patterns'] );
+        $sanitized['post_list_show_h2_h3_direct'] = ! empty( $input['post_list_show_h2_h3_direct'] );
 
         return $sanitized;
     }
@@ -467,6 +474,17 @@ class Intelligent_Checker {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>H2直下H3チェッカー</strong>
+                                <span>H2見出しの直下に本文がなくH3見出しが続いている場合にアラートを表示します</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[h2_h3_direct_enabled]" value="1" <?php checked( $settings['h2_h3_direct_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -614,6 +632,10 @@ class Intelligent_Checker {
                             <input type="checkbox" name="intelligent_checker_settings[post_list_show_banned_patterns]" value="1" <?php checked( $settings['post_list_show_banned_patterns'] ); ?>>
                             禁止文字・文言
                         </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_h2_h3_direct]" value="1" <?php checked( $settings['post_list_show_h2_h3_direct'] ); ?>>
+                            H2直下H3
+                        </label>
                         <p style="margin-top: 15px;">
                             <a href="<?php echo wp_nonce_url( admin_url( 'options-general.php?page=intelligent-checker-settings&ic_recalculate_errors=1' ), 'ic_recalculate_errors' ); ?>" class="button button-secondary">エラー数を再計算</a>
                             <span style="margin-left: 10px; color: #666;">全投稿のエラー数を再計算します（ソート機能に必要）</span>
@@ -692,6 +714,7 @@ class Intelligent_Checker {
             'cautionKeywordsHeading'         => $this->text_to_array( $settings['caution_keywords_heading'] ),
             'bannedPatternsEnabled'          => (bool) $settings['banned_patterns_enabled'],
             'bannedPatterns'                 => $this->text_to_array( $settings['banned_patterns'] ),
+            'h2H3DirectEnabled'              => (bool) $settings['h2_h3_direct_enabled'],
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => $this->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -764,6 +787,10 @@ class Intelligent_Checker {
                 'bannedPatternsTitle' => __( '投稿内に禁止文字・文言が含まれています', 'intelligent-checker' ),
                 'bannedPatternsDesc'  => __( '以下の禁止文字・文言が検出されました。削除または修正してください。', 'intelligent-checker' ),
                 'bannedPatternsCheck' => __( '該当箇所を確認', 'intelligent-checker' ),
+                // H2 Direct H3 Checker
+                'h2H3DirectTitle' => __( 'H2見出しの直下にH3見出しが続いています', 'intelligent-checker' ),
+                'h2H3DirectDesc'  => __( 'H2見出しとH3見出しの間に本文（段落など）を入れることを検討してください。', 'intelligent-checker' ),
+                'h2H3DirectCheck' => __( '該当箇所を確認', 'intelligent-checker' ),
             ),
         ) );
     }
@@ -1459,6 +1486,14 @@ class Intelligent_Checker {
             }
         }
 
+        // H2直下H3チェック
+        if ( $settings['post_list_show_h2_h3_direct'] ) {
+            $count = $this->check_h2_h3_direct_in_content( $post->post_content );
+            if ( $count > 0 ) {
+                $errors['h2_h3_direct'] = $count;
+            }
+        }
+
         return $errors;
     }
 
@@ -1619,6 +1654,59 @@ class Intelligent_Checker {
         }
 
         return $count;
+    }
+
+    /**
+     * H2見出しの直下にH3見出しがあるかチェック
+     */
+    private function check_h2_h3_direct_in_content( $content ) {
+        $blocks = parse_blocks( $content );
+        $flat_blocks = $this->flatten_blocks( $blocks );
+        $count = 0;
+
+        for ( $i = 0; $i < count( $flat_blocks ) - 1; $i++ ) {
+            $current = $flat_blocks[ $i ];
+            $next = $flat_blocks[ $i + 1 ];
+
+            // 現在のブロックがH2見出し
+            if ( $current['blockName'] === 'core/heading' ) {
+                $current_level = isset( $current['attrs']['level'] ) ? $current['attrs']['level'] : 2;
+                if ( $current_level === 2 ) {
+                    // 次のブロックがH3見出し
+                    if ( $next['blockName'] === 'core/heading' ) {
+                        $next_level = isset( $next['attrs']['level'] ) ? $next['attrs']['level'] : 2;
+                        if ( $next_level === 3 ) {
+                            $count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * ブロックをフラット化（ネストを解除）
+     */
+    private function flatten_blocks( $blocks ) {
+        $flat = array();
+
+        foreach ( $blocks as $block ) {
+            // 空のブロックはスキップ
+            if ( empty( $block['blockName'] ) ) {
+                continue;
+            }
+
+            $flat[] = $block;
+
+            if ( ! empty( $block['innerBlocks'] ) ) {
+                $inner_flat = $this->flatten_blocks( $block['innerBlocks'] );
+                $flat = array_merge( $flat, $inner_flat );
+            }
+        }
+
+        return $flat;
     }
 
     /**

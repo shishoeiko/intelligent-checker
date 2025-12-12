@@ -1594,3 +1594,109 @@ input.ic-slug-invalid:focus {
         justify-content: center;
     }
 }
+
+/* ========================================
+   H2 Direct H3 Checker Styles
+   ======================================== */
+
+/* H2直下H3アラートバナー */
+.ic-h2-h3-direct-alert-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    margin: 16px auto;
+    max-width: 650px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-left: 4px solid #f97316;
+    border-radius: 4px;
+}
+
+.ic-h2-h3-direct-alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.ic-h2-h3-direct-alert-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #f97316;
+    border-radius: 50%;
+    color: white;
+}
+
+.ic-h2-h3-direct-alert-text {
+    flex: 1;
+}
+
+.ic-h2-h3-direct-alert-title {
+    margin: 0 0 2px 0;
+    font-size: 13px;
+    color: #c2410c;
+    line-height: 1.4;
+}
+
+.ic-h2-h3-direct-alert-title strong {
+    color: #9a3412;
+}
+
+.ic-h2-h3-direct-count {
+    font-weight: normal;
+    color: #ea580c;
+}
+
+.ic-h2-h3-direct-alert-desc {
+    margin: 0;
+    font-size: 12px;
+    color: #ea580c;
+    line-height: 1.6;
+}
+
+.ic-h2-h3-direct-alert-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f97316;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ic-h2-h3-direct-alert-button:hover {
+    background: #ea580c;
+}
+
+/* H2直下H3のブロックハイライト */
+.ic-h2-h3-direct-highlight {
+    outline: 3px solid #f97316 !important;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+    .ic-h2-h3-direct-alert-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ic-h2-h3-direct-alert-button {
+        width: 100%;
+        justify-content: center;
+    }
+}

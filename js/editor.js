@@ -1390,6 +1390,161 @@
     };
 
     // ========================================
+    // H2 Direct H3 Checker Module
+    // ========================================
+    const H2H3DirectChecker = {
+        /**
+         * H2見出しの直下にH3見出しがある箇所を検出
+         */
+        findH2H3DirectIssues: function() {
+            const blocks = select('core/block-editor').getBlocks();
+            const flatBlocks = this.flattenBlocks(blocks);
+            const issues = [];
+
+            for (let i = 0; i < flatBlocks.length - 1; i++) {
+                const current = flatBlocks[i];
+                const next = flatBlocks[i + 1];
+
+                // 現在のブロックがH2見出し
+                if (current.name === 'core/heading') {
+                    const currentLevel = current.attributes.level || 2;
+                    if (currentLevel === 2) {
+                        // 次のブロックがH3見出し
+                        if (next.name === 'core/heading') {
+                            const nextLevel = next.attributes.level || 2;
+                            if (nextLevel === 3) {
+                                const h2Content = current.attributes.content || '';
+                                const h3Content = next.attributes.content || '';
+                                issues.push({
+                                    h2ClientId: current.clientId,
+                                    h3ClientId: next.clientId,
+                                    h2Text: h2Content.replace(/<[^>]*>/g, '').substring(0, 30),
+                                    h3Text: h3Content.replace(/<[^>]*>/g, '').substring(0, 30)
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            return issues;
+        },
+
+        /**
+         * ブロックをフラット化
+         */
+        flattenBlocks: function(blocks) {
+            const flat = [];
+
+            blocks.forEach(block => {
+                if (!block.name) return;
+
+                flat.push(block);
+
+                if (block.innerBlocks && block.innerBlocks.length > 0) {
+                    const innerFlat = this.flattenBlocks(block.innerBlocks);
+                    flat.push(...innerFlat);
+                }
+            });
+
+            return flat;
+        },
+
+        /**
+         * 該当ブロックにハイライト表示
+         */
+        updateHighlights: function(issues) {
+            // 既存のハイライトを削除
+            document.querySelectorAll('.ic-h2-h3-direct-highlight').forEach(el => {
+                el.classList.remove('ic-h2-h3-direct-highlight');
+            });
+
+            // 該当ブロックにハイライトを追加
+            issues.forEach(issue => {
+                const h2Element = document.querySelector(`[data-block="${issue.h2ClientId}"]`);
+                const h3Element = document.querySelector(`[data-block="${issue.h3ClientId}"]`);
+                if (h2Element) {
+                    h2Element.classList.add('ic-h2-h3-direct-highlight');
+                }
+                if (h3Element) {
+                    h3Element.classList.add('ic-h2-h3-direct-highlight');
+                }
+            });
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-h2-h3-direct-alert-banner').forEach(el => el.remove());
+
+            const issues = this.findH2H3DirectIssues();
+
+            // ハイライトを更新
+            this.updateHighlights(issues);
+
+            // 問題がなければ何もしない
+            if (issues.length === 0) {
+                return;
+            }
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-h2-h3-direct-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-h2-h3-direct-alert-content">
+                    <div class="ic-h2-h3-direct-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="ic-h2-h3-direct-alert-text">
+                        <p class="ic-h2-h3-direct-alert-title">
+                            <strong>${l10n.h2H3DirectTitle || 'H2見出しの直下にH3見出しが続いています'}</strong>
+                            <span class="ic-h2-h3-direct-count">（${issues.length}箇所）</span>
+                        </p>
+                        <p class="ic-h2-h3-direct-alert-desc">
+                            ${l10n.h2H3DirectDesc || 'H2見出しとH3見出しの間に本文（段落など）を入れることを検討してください。'}
+                        </p>
+                    </div>
+                </div>
+                <button class="ic-h2-h3-direct-alert-button" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    ${l10n.h2H3DirectCheck || '該当箇所を確認'}
+                </button>
+            `;
+
+            // ボタンクリックで最初の問題箇所にスクロール
+            banner.querySelector('.ic-h2-h3-direct-alert-button').addEventListener('click', () => {
+                if (issues.length > 0) {
+                    dispatch('core/block-editor').selectBlock(issues[0].h2ClientId);
+
+                    const blockElement = document.querySelector(`[data-block="${issues[0].h2ClientId}"]`);
+                    if (blockElement) {
+                        blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Duplicate Keyword Checker Module
     // ========================================
     const DuplicateKeywordChecker = {
@@ -1887,6 +2042,11 @@
                 // Banned Patterns Checker (禁止文字・文言チェック)
                 if (config.bannedPatternsEnabled && config.bannedPatterns && config.bannedPatterns.length > 0) {
                     BannedPatternsChecker.updateAlertBanner();
+                }
+
+                // H2 Direct H3 Checker (H2直下H3チェック)
+                if (config.h2H3DirectEnabled) {
+                    H2H3DirectChecker.updateAlertBanner();
                 }
             };
 
