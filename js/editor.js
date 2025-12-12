@@ -1545,6 +1545,147 @@
     };
 
     // ========================================
+    // Duplicate Heading Checker Module
+    // ========================================
+    const DuplicateHeadingChecker = {
+        /**
+         * 重複している見出し文言を検出
+         */
+        findDuplicateHeadings: function() {
+            const blocks = select('core/block-editor').getBlocks();
+            const flatBlocks = H2H3DirectChecker.flattenBlocks(blocks);
+            const headingMap = new Map();
+
+            // 全ての見出しを収集
+            flatBlocks.forEach(block => {
+                if (block.name === 'core/heading') {
+                    const content = block.attributes.content || '';
+                    const text = content.replace(/<[^>]*>/g, '').trim();
+                    if (text) {
+                        if (!headingMap.has(text)) {
+                            headingMap.set(text, []);
+                        }
+                        headingMap.get(text).push({
+                            clientId: block.clientId,
+                            level: block.attributes.level || 2
+                        });
+                    }
+                }
+            });
+
+            // 重複している見出しを返す
+            const duplicates = [];
+            headingMap.forEach((items, text) => {
+                if (items.length >= 2) {
+                    duplicates.push({
+                        text: text,
+                        count: items.length,
+                        items: items
+                    });
+                }
+            });
+
+            return duplicates;
+        },
+
+        /**
+         * 該当ブロックにハイライト表示
+         */
+        updateHighlights: function(duplicates) {
+            // 既存のハイライトを削除
+            document.querySelectorAll('.ic-duplicate-heading-highlight').forEach(el => {
+                el.classList.remove('ic-duplicate-heading-highlight');
+            });
+
+            // 該当ブロックにハイライトを追加
+            duplicates.forEach(dup => {
+                dup.items.forEach(item => {
+                    const blockElement = document.querySelector(`[data-block="${item.clientId}"]`);
+                    if (blockElement) {
+                        blockElement.classList.add('ic-duplicate-heading-highlight');
+                    }
+                });
+            });
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-duplicate-heading-alert-banner').forEach(el => el.remove());
+
+            const duplicates = this.findDuplicateHeadings();
+
+            // ハイライトを更新
+            this.updateHighlights(duplicates);
+
+            // 問題がなければ何もしない
+            if (duplicates.length === 0) {
+                return;
+            }
+
+            const totalDuplicates = duplicates.reduce((sum, d) => sum + d.count, 0);
+            const duplicateTexts = duplicates.map(d => `「${d.text.substring(0, 20)}${d.text.length > 20 ? '...' : ''}」`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-duplicate-heading-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-duplicate-heading-alert-content">
+                    <div class="ic-duplicate-heading-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="ic-duplicate-heading-alert-text">
+                        <p class="ic-duplicate-heading-alert-title">
+                            <strong>${l10n.duplicateHeadingTitle || '同じ文言の見出しが複数あります'}</strong>
+                            <span class="ic-duplicate-heading-count">（${duplicates.length}種類・計${totalDuplicates}件）</span>
+                        </p>
+                        <p class="ic-duplicate-heading-alert-desc">
+                            ${l10n.duplicateHeadingDesc || '見出しの文言が重複しています。異なる表現に変更することを検討してください。'}
+                            <br>
+                            <span class="ic-duplicate-heading-list">重複: ${duplicateTexts}</span>
+                        </p>
+                    </div>
+                </div>
+                <button class="ic-duplicate-heading-alert-button" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    ${l10n.duplicateHeadingCheck || '該当箇所を確認'}
+                </button>
+            `;
+
+            // ボタンクリックで最初の問題箇所にスクロール
+            banner.querySelector('.ic-duplicate-heading-alert-button').addEventListener('click', () => {
+                if (duplicates.length > 0 && duplicates[0].items.length > 0) {
+                    dispatch('core/block-editor').selectBlock(duplicates[0].items[0].clientId);
+
+                    const blockElement = document.querySelector(`[data-block="${duplicates[0].items[0].clientId}"]`);
+                    if (blockElement) {
+                        blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Duplicate Keyword Checker Module
     // ========================================
     const DuplicateKeywordChecker = {
@@ -2047,6 +2188,11 @@
                 // H2 Direct H3 Checker (H2直下H3チェック)
                 if (config.h2H3DirectEnabled) {
                     H2H3DirectChecker.updateAlertBanner();
+                }
+
+                // Duplicate Heading Checker (見出し重複チェック)
+                if (config.duplicateHeadingEnabled) {
+                    DuplicateHeadingChecker.updateAlertBanner();
                 }
             };
 

@@ -1700,3 +1700,119 @@ input.ic-slug-invalid:focus {
         justify-content: center;
     }
 }
+
+/* ========================================
+   Duplicate Heading Checker Styles
+   ======================================== */
+
+/* 見出し重複アラートバナー */
+.ic-duplicate-heading-alert-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    margin: 16px auto;
+    max-width: 650px;
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    border-left: 4px solid #eab308;
+    border-radius: 4px;
+}
+
+.ic-duplicate-heading-alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.ic-duplicate-heading-alert-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #eab308;
+    border-radius: 50%;
+    color: white;
+}
+
+.ic-duplicate-heading-alert-text {
+    flex: 1;
+}
+
+.ic-duplicate-heading-alert-title {
+    margin: 0 0 2px 0;
+    font-size: 13px;
+    color: #a16207;
+    line-height: 1.4;
+}
+
+.ic-duplicate-heading-alert-title strong {
+    color: #854d0e;
+}
+
+.ic-duplicate-heading-count {
+    font-weight: normal;
+    color: #ca8a04;
+}
+
+.ic-duplicate-heading-alert-desc {
+    margin: 0;
+    font-size: 12px;
+    color: #ca8a04;
+    line-height: 1.6;
+}
+
+.ic-duplicate-heading-list {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    background: #fef9c3;
+    border-radius: 3px;
+    font-weight: 600;
+    color: #854d0e;
+}
+
+.ic-duplicate-heading-alert-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #eab308;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ic-duplicate-heading-alert-button:hover {
+    background: #ca8a04;
+}
+
+/* 重複見出しのブロックハイライト */
+.ic-duplicate-heading-highlight {
+    outline: 3px solid #eab308 !important;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+    .ic-duplicate-heading-alert-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ic-duplicate-heading-alert-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
