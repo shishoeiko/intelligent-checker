@@ -303,13 +303,15 @@ class IC_Error_Checker {
 
     /**
      * H2見出しの直下にH3見出しがあるかチェック
+     * H2 → H3 または H2 → 画像 → H3 のパターンを検出
      */
     private function check_h2_h3_direct_in_content( $content ) {
         $blocks = parse_blocks( $content );
         $flat_blocks = $this->flatten_blocks( $blocks );
         $count = 0;
+        $block_count = count( $flat_blocks );
 
-        for ( $i = 0; $i < count( $flat_blocks ) - 1; $i++ ) {
+        for ( $i = 0; $i < $block_count - 1; $i++ ) {
             $current = $flat_blocks[ $i ];
             $next = $flat_blocks[ $i + 1 ];
 
@@ -322,6 +324,16 @@ class IC_Error_Checker {
                         $next_level = isset( $next['attrs']['level'] ) ? $next['attrs']['level'] : 2;
                         if ( $next_level === 3 ) {
                             $count++;
+                        }
+                    }
+                    // 次のブロックが画像で、その次がH3見出し
+                    elseif ( $next['blockName'] === 'core/image' && $i + 2 < $block_count ) {
+                        $after_image = $flat_blocks[ $i + 2 ];
+                        if ( $after_image['blockName'] === 'core/heading' ) {
+                            $after_image_level = isset( $after_image['attrs']['level'] ) ? $after_image['attrs']['level'] : 2;
+                            if ( $after_image_level === 3 ) {
+                                $count++;
+                            }
                         }
                     }
                 }

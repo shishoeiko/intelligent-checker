@@ -1423,6 +1423,23 @@
                                 });
                             }
                         }
+                        // 次のブロックが画像で、その次がH3見出し
+                        else if (next.name === 'core/image' && i + 2 < flatBlocks.length) {
+                            const afterImage = flatBlocks[i + 2];
+                            if (afterImage.name === 'core/heading') {
+                                const afterImageLevel = afterImage.attributes.level || 2;
+                                if (afterImageLevel === 3) {
+                                    const h2Content = current.attributes.content || '';
+                                    const h3Content = afterImage.attributes.content || '';
+                                    issues.push({
+                                        h2ClientId: current.clientId,
+                                        h3ClientId: afterImage.clientId,
+                                        h2Text: h2Content.replace(/<[^>]*>/g, '').substring(0, 30),
+                                        h3Text: h3Content.replace(/<[^>]*>/g, '').substring(0, 30)
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
             }
