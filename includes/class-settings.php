@@ -70,9 +70,9 @@ class IC_Settings {
             'forbidden_keywords_heading' => "",
             // 要注意キーワードチェック設定（タイトル用）
             'caution_keyword_enabled' => true,
-            'caution_keywords' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
+            'caution_keywords' => "投資\n副業\nネットショップ",
             // 要注意キーワードチェック設定（H2見出し用）
-            'caution_keywords_heading' => "投資詐欺\n副業詐欺\nネットショップ詐欺",
+            'caution_keywords_heading' => "投資\n副業\nネットショップ",
             // 禁止文字・文言チェック設定（投稿全体）
             'banned_patterns_enabled' => true,
             'banned_patterns' => "**",
