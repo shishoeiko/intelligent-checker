@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.12.2
+ * Version: 1.13.0
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // 定数定義
-define( 'IC_VERSION', '1.12.2' );
+define( 'IC_VERSION', '1.13.0' );
 define( 'IC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'IC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -30,7 +30,7 @@ require_once IC_PLUGIN_DIR . 'includes/class-post-list.php';
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.12.2';
+    const VERSION = '1.13.0';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -119,6 +119,8 @@ class Intelligent_Checker {
             'bannedPatterns'                 => IC_Settings::get_instance()->text_to_array( $settings['banned_patterns'] ),
             'h2H3DirectEnabled'              => (bool) $settings['h2_h3_direct_enabled'],
             'duplicateHeadingEnabled'        => (bool) $settings['duplicate_heading_enabled'],
+            'h2RequiredKeywordEnabled'       => (bool) $settings['h2_required_keyword_enabled'],
+            'h2RequiredKeywords'             => IC_Settings::get_instance()->text_to_array( $settings['h2_required_keywords'] ),
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => IC_Settings::get_instance()->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -199,6 +201,10 @@ class Intelligent_Checker {
                 'duplicateHeadingTitle' => __( '同じ文言の見出しが複数あります', 'intelligent-checker' ),
                 'duplicateHeadingDesc'  => __( '見出しの文言が重複しています。異なる表現に変更することを検討してください。', 'intelligent-checker' ),
                 'duplicateHeadingCheck' => __( '該当箇所を確認', 'intelligent-checker' ),
+                // H2 Required Keyword Checker
+                'h2RequiredKeywordTitle' => __( 'タイトルのキーワードがH2見出しに含まれていません', 'intelligent-checker' ),
+                'h2RequiredKeywordDesc'  => __( 'タイトルに含まれているキーワードはH2見出しにも入れることを検討してください。', 'intelligent-checker' ),
+                'h2RequiredKeywordList'  => __( '不足キーワード', 'intelligent-checker' ),
             ),
         ) );
     }

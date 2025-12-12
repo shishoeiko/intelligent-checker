@@ -1703,6 +1703,115 @@
     };
 
     // ========================================
+    // H2 Required Keyword Checker Module
+    // ========================================
+    const H2RequiredKeywordChecker = {
+        /**
+         * タイトルに含まれているがH2に含まれていないキーワードを検出
+         */
+        findMissingKeywordsInH2: function() {
+            const keywords = config.h2RequiredKeywords || [];
+            if (keywords.length === 0) {
+                return [];
+            }
+
+            const title = select('core/editor').getEditedPostAttribute('title') || '';
+            if (!title) {
+                return [];
+            }
+
+            // H2見出しのテキストを収集
+            const blocks = select('core/block-editor').getBlocks();
+            const flatBlocks = H2H3DirectChecker.flattenBlocks(blocks);
+            const h2Texts = [];
+
+            flatBlocks.forEach(block => {
+                if (block.name === 'core/heading') {
+                    const level = block.attributes.level || 2;
+                    if (level === 2) {
+                        const content = block.attributes.content || '';
+                        const text = content.replace(/<[^>]*>/g, '').trim();
+                        if (text) {
+                            h2Texts.push(text);
+                        }
+                    }
+                }
+            });
+
+            // タイトルに含まれているがH2に含まれていないキーワードを検出
+            const missingKeywords = [];
+
+            keywords.forEach(keyword => {
+                if (!keyword) return;
+
+                // タイトルにキーワードが含まれているか
+                if (title.includes(keyword)) {
+                    // H2のいずれかにキーワードが含まれているか
+                    const foundInH2 = h2Texts.some(h2Text => h2Text.includes(keyword));
+                    if (!foundInH2) {
+                        missingKeywords.push(keyword);
+                    }
+                }
+            });
+
+            return missingKeywords;
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-h2-required-keyword-alert-banner').forEach(el => el.remove());
+
+            const missingKeywords = this.findMissingKeywordsInH2();
+
+            // 問題がなければ何もしない
+            if (missingKeywords.length === 0) {
+                return;
+            }
+
+            const keywordList = missingKeywords.map(kw => `「${kw}」`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-h2-required-keyword-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-h2-required-keyword-alert-content">
+                    <div class="ic-h2-required-keyword-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div class="ic-h2-required-keyword-alert-text">
+                        <p class="ic-h2-required-keyword-alert-title">
+                            <strong>${l10n.h2RequiredKeywordTitle || 'タイトルのキーワードがH2見出しに含まれていません'}</strong>
+                            <span class="ic-h2-required-keyword-count">（${missingKeywords.length}件）</span>
+                        </p>
+                        <p class="ic-h2-required-keyword-alert-desc">
+                            ${l10n.h2RequiredKeywordDesc || 'タイトルに含まれているキーワードはH2見出しにも入れることを検討してください。'}
+                            <br>
+                            <span class="ic-h2-required-keyword-list">${l10n.h2RequiredKeywordList || '不足キーワード'}: ${keywordList}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+        }
+    };
+
+    // ========================================
     // Duplicate Keyword Checker Module
     // ========================================
     const DuplicateKeywordChecker = {
@@ -2210,6 +2319,11 @@
                 // Duplicate Heading Checker (見出し重複チェック)
                 if (config.duplicateHeadingEnabled) {
                     DuplicateHeadingChecker.updateAlertBanner();
+                }
+
+                // H2 Required Keyword Checker (H2必須キーワードチェック)
+                if (config.h2RequiredKeywordEnabled && config.h2RequiredKeywords && config.h2RequiredKeywords.length > 0) {
+                    H2RequiredKeywordChecker.updateAlertBanner();
                 }
             };
 

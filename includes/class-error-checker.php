@@ -139,6 +139,14 @@ class IC_Error_Checker {
             }
         }
 
+        // H2必須キーワードチェック
+        if ( $settings['post_list_show_h2_required_keyword'] ) {
+            $count = $this->check_h2_required_keywords( $post->post_title, $post->post_content );
+            if ( $count > 0 ) {
+                $errors['h2_required_keyword'] = $count;
+            }
+        }
+
         return $errors;
     }
 
@@ -592,6 +600,52 @@ class IC_Error_Checker {
         if ( ! empty( $block['innerBlocks'] ) ) {
             foreach ( $block['innerBlocks'] as $inner_block ) {
                 $count += $this->check_long_paragraph_in_block( $inner_block, $threshold, $exclude_classes, $block_is_excluded );
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * H2必須キーワードをチェック
+     * タイトルに含まれているキーワードがH2見出しに含まれているかチェック
+     */
+    private function check_h2_required_keywords( $title, $content ) {
+        $settings = IC_Settings::get_instance()->get_settings();
+        $keywords = IC_Settings::get_instance()->text_to_array( $settings['h2_required_keywords'] );
+        $count = 0;
+
+        if ( empty( $keywords ) || empty( $title ) ) {
+            return 0;
+        }
+
+        // H2見出しを抽出
+        $h2_texts = array();
+        if ( preg_match_all( '/<h2[^>]*>(.*?)<\/h2>/is', $content, $matches ) ) {
+            foreach ( $matches[1] as $heading ) {
+                $h2_texts[] = wp_strip_all_tags( $heading );
+            }
+        }
+
+        // 各キーワードをチェック
+        foreach ( $keywords as $keyword ) {
+            if ( empty( $keyword ) ) {
+                continue;
+            }
+
+            // タイトルにキーワードが含まれているか
+            if ( mb_strpos( $title, $keyword ) !== false ) {
+                // H2のいずれかにキーワードが含まれているか
+                $found_in_h2 = false;
+                foreach ( $h2_texts as $h2_text ) {
+                    if ( mb_strpos( $h2_text, $keyword ) !== false ) {
+                        $found_in_h2 = true;
+                        break;
+                    }
+                }
+                if ( ! $found_in_h2 ) {
+                    $count++;
+                }
             }
         }
 

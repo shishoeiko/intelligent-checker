@@ -80,6 +80,9 @@ class IC_Settings {
             'h2_h3_direct_enabled' => true,
             // 見出し重複チェック設定
             'duplicate_heading_enabled' => true,
+            // H2必須キーワードチェック設定
+            'h2_required_keyword_enabled' => true,
+            'h2_required_keywords' => "口コミ",
             // 投稿一覧エラー表示設定
             'post_list_error_column_enabled' => true,
             'post_list_show_forbidden_keyword_title' => true,
@@ -94,6 +97,7 @@ class IC_Settings {
             'post_list_show_banned_patterns' => true,
             'post_list_show_h2_h3_direct' => true,
             'post_list_show_duplicate_heading' => true,
+            'post_list_show_h2_required_keyword' => true,
         );
     }
 
@@ -207,6 +211,10 @@ class IC_Settings {
         // 見出し重複チェック設定
         $sanitized['duplicate_heading_enabled'] = ! empty( $input['duplicate_heading_enabled'] );
 
+        // H2必須キーワードチェック設定
+        $sanitized['h2_required_keyword_enabled'] = ! empty( $input['h2_required_keyword_enabled'] );
+        $sanitized['h2_required_keywords'] = isset( $input['h2_required_keywords'] ) ? sanitize_textarea_field( $input['h2_required_keywords'] ) : '';
+
         // 投稿一覧エラー表示設定
         $sanitized['post_list_error_column_enabled'] = ! empty( $input['post_list_error_column_enabled'] );
         $sanitized['post_list_show_forbidden_keyword_title'] = ! empty( $input['post_list_show_forbidden_keyword_title'] );
@@ -221,6 +229,7 @@ class IC_Settings {
         $sanitized['post_list_show_banned_patterns'] = ! empty( $input['post_list_show_banned_patterns'] );
         $sanitized['post_list_show_h2_h3_direct'] = ! empty( $input['post_list_show_h2_h3_direct'] );
         $sanitized['post_list_show_duplicate_heading'] = ! empty( $input['post_list_show_duplicate_heading'] );
+        $sanitized['post_list_show_h2_required_keyword'] = ! empty( $input['post_list_show_h2_required_keyword'] );
 
         return $sanitized;
     }
@@ -454,6 +463,17 @@ class IC_Settings {
                                 有効
                             </label>
                         </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-label">
+                                <strong>H2必須キーワードチェッカー</strong>
+                                <span>タイトルに特定のキーワードが含まれている場合、H2見出しにも含まれているかチェックします</span>
+                            </div>
+                            <label>
+                                <input type="checkbox" name="intelligent_checker_settings[h2_required_keyword_enabled]" value="1" <?php checked( $settings['h2_required_keyword_enabled'] ); ?>>
+                                有効
+                            </label>
+                        </div>
                     </div>
 
                     <!-- タイトルチェック: 文字数設定 -->
@@ -527,6 +547,13 @@ class IC_Settings {
                         <h2>要注意キーワード（H2見出し）</h2>
                         <textarea name="intelligent_checker_settings[caution_keywords_heading]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['caution_keywords_heading'] ); ?></textarea>
                         <p class="description">1行に1つずつキーワードを入力してください。H2見出しにこれらのキーワードが含まれている場合に黄色のアラートを表示します。空の場合はチェックされません。</p>
+                    </div>
+
+                    <!-- H2必須キーワード -->
+                    <div class="form-section">
+                        <h2>H2必須キーワード</h2>
+                        <textarea name="intelligent_checker_settings[h2_required_keywords]" placeholder="1行に1つずつ入力"><?php echo esc_textarea( $settings['h2_required_keywords'] ); ?></textarea>
+                        <p class="description">1行に1つずつキーワードを入力してください。タイトルにこれらのキーワードが含まれている場合、H2見出しにも同じキーワードが含まれているかチェックします。含まれていない場合はアラートを表示します。</p>
                     </div>
 
                     <!-- 禁止文字・文言（投稿全体） -->
@@ -608,6 +635,10 @@ class IC_Settings {
                         <label style="display: block; margin-bottom: 5px;">
                             <input type="checkbox" name="intelligent_checker_settings[post_list_show_duplicate_heading]" value="1" <?php checked( $settings['post_list_show_duplicate_heading'] ); ?>>
                             見出し重複
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" name="intelligent_checker_settings[post_list_show_h2_required_keyword]" value="1" <?php checked( $settings['post_list_show_h2_required_keyword'] ); ?>>
+                            H2必須キーワード不足
                         </label>
                         <p style="margin-top: 15px;">
                             <a href="<?php echo wp_nonce_url( admin_url( 'options-general.php?page=intelligent-checker-settings&ic_recalculate_errors=1' ), 'ic_recalculate_errors' ); ?>" class="button button-secondary">エラー数を再計算</a>
