@@ -143,10 +143,10 @@ class IC_GitHub_Updater {
         $new_version = $release_info->version;
 
         if ( version_compare( $new_version, $current_version, '>' ) ) {
-            $plugin_file = 'intelligent-checker/intelligent-checker.php';
+            $plugin_file = IC_PLUGIN_BASENAME;
 
             $transient->response[ $plugin_file ] = (object) array(
-                'slug'        => 'intelligent-checker',
+                'slug'        => dirname( $plugin_file ),
                 'plugin'      => $plugin_file,
                 'new_version' => $new_version,
                 'url'         => 'https://github.com/' . Intelligent_Checker::GITHUB_USERNAME . '/' . Intelligent_Checker::GITHUB_REPO,
@@ -174,7 +174,7 @@ class IC_GitHub_Updater {
             return $result;
         }
 
-        $plugin_slug = 'intelligent-checker';
+        $plugin_slug = dirname( IC_PLUGIN_BASENAME );
 
         if ( ! isset( $args->slug ) || $args->slug !== $plugin_slug ) {
             return $result;
@@ -254,7 +254,7 @@ class IC_GitHub_Updater {
         global $wp_filesystem;
 
         // このプラグインの更新かどうかチェック
-        $plugin_slug = 'intelligent-checker';
+        $plugin_slug = dirname( IC_PLUGIN_BASENAME );
 
         if ( ! isset( $hook_extra['plugin'] ) ) {
             return $result;
