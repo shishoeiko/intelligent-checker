@@ -75,7 +75,7 @@ class IC_Settings {
             'caution_keywords_heading' => "投資\n副業\nネットショップ",
             // 禁止文字・文言チェック設定（投稿全体）
             'banned_patterns_enabled' => true,
-            'banned_patterns' => "**",
+            'banned_patterns' => "**\n\"",
             // H2直下H3チェック設定
             'h2_h3_direct_enabled' => true,
             // 見出し重複チェック設定
