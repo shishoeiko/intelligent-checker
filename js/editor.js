@@ -1812,6 +1812,152 @@
     };
 
     // ========================================
+    // Duplicate Pattern Checker Module (同期パターン対応)
+    // ========================================
+    const DuplicatePatternChecker = {
+        /**
+         * 同期パターンの使用状況を収集
+         * 同期パターンは core/block ブロックとして挿入され、ref属性に投稿IDが含まれる
+         */
+        findDuplicatePatterns: function() {
+            const targetPatternIds = config.duplicatePatternNames || [];
+            if (targetPatternIds.length === 0) return [];
+
+            const blocks = select('core/block-editor').getBlocks();
+            const patternUsage = {}; // { ref: [clientId, clientId, ...] }
+
+            const checkBlocks = (blocksToCheck) => {
+                blocksToCheck.forEach(block => {
+                    // 同期パターン（core/block）をチェック
+                    if (block.name === 'core/block' && block.attributes?.ref) {
+                        const refId = String(block.attributes.ref);
+                        if (targetPatternIds.includes(refId)) {
+                            if (!patternUsage[refId]) {
+                                patternUsage[refId] = [];
+                            }
+                            patternUsage[refId].push(block.clientId);
+                        }
+                    }
+                    if (block.innerBlocks && block.innerBlocks.length > 0) {
+                        checkBlocks(block.innerBlocks);
+                    }
+                });
+            };
+
+            checkBlocks(blocks);
+
+            // 2回以上使用されているパターンのみ返す
+            const duplicates = [];
+            Object.entries(patternUsage).forEach(([refId, clientIds]) => {
+                if (clientIds.length >= 2) {
+                    duplicates.push({
+                        patternName: refId,
+                        clientIds: clientIds,
+                        count: clientIds.length
+                    });
+                }
+            });
+            return duplicates;
+        },
+
+        /**
+         * ハイライトを更新
+         */
+        updateHighlights: function(duplicates) {
+            // 既存のハイライトを削除
+            document.querySelectorAll('.ic-duplicate-pattern-highlight').forEach(el => {
+                el.classList.remove('ic-duplicate-pattern-highlight');
+            });
+
+            // 重複がなければ何もしない
+            if (!duplicates || duplicates.length === 0) return;
+
+            // 該当ブロックにハイライト追加
+            duplicates.forEach(dup => {
+                dup.clientIds.forEach(clientId => {
+                    const blockElement = document.querySelector(`[data-block="${clientId}"]`);
+                    if (blockElement) {
+                        blockElement.classList.add('ic-duplicate-pattern-highlight');
+                    }
+                });
+            });
+        },
+
+        /**
+         * アラートバナーを更新
+         */
+        updateAlertBanner: function() {
+            // 既存のバナーを削除
+            document.querySelectorAll('.ic-duplicate-pattern-alert-banner').forEach(el => el.remove());
+
+            const duplicates = this.findDuplicatePatterns();
+
+            // ハイライトを更新
+            this.updateHighlights(duplicates);
+
+            // 重複がなければ何もしない
+            if (duplicates.length === 0) {
+                return;
+            }
+
+            const totalCount = duplicates.reduce((sum, d) => sum + d.count, 0);
+            const patternDisplay = duplicates.map(d => `「${d.patternName}」(${d.count}回)`).join('、');
+
+            const banner = document.createElement('div');
+            banner.className = 'ic-duplicate-pattern-alert-banner';
+            banner.innerHTML = `
+                <div class="ic-duplicate-pattern-alert-content">
+                    <div class="ic-duplicate-pattern-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </div>
+                    <div class="ic-duplicate-pattern-alert-text">
+                        <p class="ic-duplicate-pattern-alert-title">
+                            <strong>${l10n.duplicatePatternTitle || '同一パターンが複数回使用されています'}</strong>
+                            <span class="ic-duplicate-pattern-count">（${duplicates.length}種類）</span>
+                        </p>
+                        <p class="ic-duplicate-pattern-alert-desc">
+                            ${l10n.duplicatePatternDesc || '同じパターンを複数回使用しています。重複を避けるか、意図的な場合はそのまま公開してください。'}
+                            <br>
+                            <span class="ic-duplicate-pattern-list">検出: ${patternDisplay}</span>
+                        </p>
+                    </div>
+                </div>
+                <button class="ic-duplicate-pattern-alert-button" type="button">
+                    ${l10n.duplicatePatternCheck || '該当箇所を確認'}
+                </button>
+            `;
+
+            // タイトル入力欄の後に挿入
+            const titleWrapper = document.querySelector('.edit-post-visual-editor__post-title-wrapper');
+            if (titleWrapper) {
+                titleWrapper.parentNode.insertBefore(banner, titleWrapper.nextSibling);
+            } else {
+                const titleBlock = document.querySelector('.editor-post-title');
+                if (titleBlock) {
+                    titleBlock.parentNode.insertBefore(banner, titleBlock.nextSibling);
+                }
+            }
+
+            // ボタンクリックで最初の重複ブロックにスクロール
+            banner.querySelector('.ic-duplicate-pattern-alert-button').addEventListener('click', () => {
+                if (duplicates.length > 0 && duplicates[0].clientIds.length > 0) {
+                    const firstClientId = duplicates[0].clientIds[0];
+                    dispatch('core/block-editor').selectBlock(firstClientId);
+                    const blockElement = document.querySelector(`[data-block="${firstClientId}"]`);
+                    if (blockElement) {
+                        blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+        }
+    };
+
+    // ========================================
     // Duplicate Keyword Checker Module
     // ========================================
     const DuplicateKeywordChecker = {
@@ -2324,6 +2470,11 @@
                 // H2 Required Keyword Checker (H2必須キーワードチェック)
                 if (config.h2RequiredKeywordEnabled && config.h2RequiredKeywords && config.h2RequiredKeywords.length > 0) {
                     H2RequiredKeywordChecker.updateAlertBanner();
+                }
+
+                // Duplicate Pattern Checker
+                if (config.duplicatePatternEnabled) {
+                    DuplicatePatternChecker.updateAlertBanner();
                 }
             };
 

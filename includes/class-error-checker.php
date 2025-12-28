@@ -147,6 +147,14 @@ class IC_Error_Checker {
             }
         }
 
+        // パターン重複使用チェック
+        if ( $settings['post_list_show_duplicate_pattern'] ) {
+            $count = $this->check_duplicate_patterns_in_content( $post->post_content );
+            if ( $count > 0 ) {
+                $errors['duplicate_pattern'] = $count;
+            }
+        }
+
         return $errors;
     }
 
@@ -650,5 +658,57 @@ class IC_Error_Checker {
         }
 
         return $count;
+    }
+
+    /**
+     * コンテンツ内のパターン重複をチェック
+     */
+    private function check_duplicate_patterns_in_content( $content ) {
+        $settings = IC_Settings::get_instance()->get_settings();
+        $target_patterns = IC_Settings::get_instance()->text_to_array( $settings['duplicate_pattern_names'] );
+
+        if ( empty( $target_patterns ) ) {
+            return 0;
+        }
+
+        $blocks = parse_blocks( $content );
+        $pattern_usage = array();
+
+        $this->collect_pattern_usage( $blocks, $target_patterns, $pattern_usage );
+
+        // 2回以上使用されているパターンの数をカウント
+        $count = 0;
+        foreach ( $pattern_usage as $name => $client_ids ) {
+            if ( count( $client_ids ) >= 2 ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * ブロック内の同期パターン使用状況を再帰的に収集
+     * 同期パターンは core/block ブロックとして挿入され、ref属性に投稿IDが含まれる
+     */
+    private function collect_pattern_usage( $blocks, $target_patterns, &$pattern_usage ) {
+        foreach ( $blocks as $block ) {
+            // 同期パターン（core/block）をチェック
+            if ( $block['blockName'] === 'core/block' && isset( $block['attrs']['ref'] ) ) {
+                $ref_id = (string) $block['attrs']['ref'];
+
+                if ( in_array( $ref_id, $target_patterns, true ) ) {
+                    if ( ! isset( $pattern_usage[ $ref_id ] ) ) {
+                        $pattern_usage[ $ref_id ] = array();
+                    }
+                    $pattern_usage[ $ref_id ][] = true;
+                }
+            }
+
+            // 内部ブロックを再帰的にチェック
+            if ( ! empty( $block['innerBlocks'] ) ) {
+                $this->collect_pattern_usage( $block['innerBlocks'], $target_patterns, $pattern_usage );
+            }
+        }
     }
 }

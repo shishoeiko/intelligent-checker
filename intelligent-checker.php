@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Intelligent Checker
  * Description: 投稿編集画面で画像ALT属性チェック、URL直書きアラート、タイトルセルフチェックを行う統合プラグイン
- * Version: 1.13.4
+ * Version: 1.13.5
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: intelligent-checker
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // 定数定義
-define( 'IC_VERSION', '1.13.4' );
+define( 'IC_VERSION', '1.13.5' );
 define( 'IC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'IC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'IC_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -31,7 +31,7 @@ require_once IC_PLUGIN_DIR . 'includes/class-post-list.php';
  */
 class Intelligent_Checker {
 
-    const VERSION = '1.13.4';
+    const VERSION = '1.13.5';
 
     // GitHub自動更新用定数
     const GITHUB_USERNAME = 'shishoeiko';
@@ -122,6 +122,8 @@ class Intelligent_Checker {
             'duplicateHeadingEnabled'        => (bool) $settings['duplicate_heading_enabled'],
             'h2RequiredKeywordEnabled'       => (bool) $settings['h2_required_keyword_enabled'],
             'h2RequiredKeywords'             => IC_Settings::get_instance()->text_to_array( $settings['h2_required_keywords'] ),
+            'duplicatePatternEnabled'        => (bool) $settings['duplicate_pattern_enabled'],
+            'duplicatePatternNames'          => IC_Settings::get_instance()->text_to_array( $settings['duplicate_pattern_names'] ),
             'longParagraphThreshold'      => (int) $settings['long_paragraph_threshold'],
             'longParagraphExcludeClasses' => IC_Settings::get_instance()->text_to_array( $settings['long_paragraph_exclude_classes'] ),
             // タイトルチェック設定
@@ -206,6 +208,10 @@ class Intelligent_Checker {
                 'h2RequiredKeywordTitle' => __( 'タイトルのキーワードがH2見出しに含まれていません', 'intelligent-checker' ),
                 'h2RequiredKeywordDesc'  => __( 'タイトルに含まれているキーワードはH2見出しにも入れることを検討してください。', 'intelligent-checker' ),
                 'h2RequiredKeywordList'  => __( '不足キーワード', 'intelligent-checker' ),
+                // Duplicate Pattern Checker
+                'duplicatePatternTitle' => __( '同一パターンが複数回使用されています', 'intelligent-checker' ),
+                'duplicatePatternDesc'  => __( '同じパターンを複数回使用しています。重複を避けるか、意図的な場合はそのまま公開してください。', 'intelligent-checker' ),
+                'duplicatePatternCheck' => __( '該当箇所を確認', 'intelligent-checker' ),
             ),
         ) );
     }
